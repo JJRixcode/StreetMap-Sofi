@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ruta a pie en Street View</title>
+<meta name="description" content="Genera un video caminando por Google Street View desde una dirección hasta otra.">
+<link rel="icon" href="iconos/icono.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+<div class="app">
+<aside>
+  <h1>Ruta a pie en Street View</h1>
+  <p class="sub">Pon dos direcciones, ajusta la ruta y genera un video caminando por Street View.</p>
+
+  <div class="card" id="keyCard">
+    <h2>1 · Clave de Google</h2>
+    <div class="row">
+      <input type="password" id="apiKey" placeholder="Pega tu API key (AIza...)" autocomplete="off">
+      <button id="saveKey">Guardar</button>
+    </div>
+    <p class="hint">Se guarda solo en este navegador. Necesita activadas: <b>Maps JavaScript API</b>, <b>Geocoding API</b>, <b>Routes API</b> y <b>Street View Static API</b>.</p>
+    <div class="msg" id="keyMsg"></div>
+  </div>
+
+  <div class="card" id="cardDirs">
+    <h2>2 · Direcciones</h2>
+    <label for="from">Desde</label>
+    <div class="row">
+      <input type="text" id="from" placeholder="Ej: Calle 93 #11-27, Bogotá">
+      <button class="pick" data-pick="from" title="Elegir en el mapa">📍 Mapa</button>
+    </div>
+    <label for="to">Hasta</label>
+    <div class="row">
+      <input type="text" id="to" placeholder="Dirección de destino">
+      <button class="pick" data-pick="to" title="Elegir en el mapa">📍 Mapa</button>
+    </div>
+    <button class="primary" id="routeBtn">Calcular ruta a pie</button>
+    <div class="stats" id="routeStats" hidden>
+      <span><b id="stDist">–</b> recorrido</span>
+      <span><b id="stTime">–</b> caminando</span>
+    </div>
+    <p class="hint" id="routeHint" hidden>¿Tú conoces otro camino? <b>Toca el mapa</b> para agregar un punto por donde pasar. Arrastra los puntos para moverlos y tócalos para quitarlos.</p>
+    <div class="msg" id="routeMsg"></div>
+  </div>
+
+  <div class="card" id="cardVideo">
+    <h2>3 · Video</h2>
+    <label for="title">Texto en el video</label>
+    <input type="text" id="title" placeholder="Nombre del destino">
+    <div class="two">
+      <div>
+        <label for="format">Formato</label>
+        <select id="format">
+          <option value="h">Horizontal 16:9</option>
+          <option value="v">Vertical 9:16 (WhatsApp)</option>
+        </select>
+      </div>
+      <div>
+        <label for="speed">Velocidad</label>
+        <select id="speed">
+          <option value="1100">Lenta</option>
+          <option value="750" selected>Normal</option>
+          <option value="480">Rápida</option>
+        </select>
+      </div>
+    </div>
+    <div class="two">
+      <div>
+        <label for="step">Foto cada</label>
+        <select id="step">
+          <option value="6">6 m (más fluido)</option>
+          <option value="9" selected>9 m</option>
+          <option value="14">14 m</option>
+          <option value="20">20 m (menos fotos)</option>
+        </select>
+      </div>
+      <div>
+        <label for="turns">Esquinas</label>
+        <select id="turns">
+          <option value="1" selected>Girar la cámara</option>
+          <option value="0">Corte directo</option>
+        </select>
+      </div>
+    </div>
+    <button class="primary" id="prepBtn" disabled>Preparar recorrido</button>
+    <div class="bar" id="bar"><i></i></div>
+    <div class="msg" id="prepMsg"></div>
+    <div class="btns">
+      <button id="playBtn" disabled>▶ Ver</button>
+      <button id="recBtn" disabled>⬇ Descargar video</button>
+    </div>
+    <div class="dl" id="dl">
+      <a id="dlLink" href="#">Guardar video</a>
+      <button id="shareBtn" hidden>Compartir (WhatsApp, etc.)</button>
+    </div>
+    <p class="hint">Mientras se graba, deja la página abierta y la pantalla encendida: el video se graba en tiempo real.</p>
+  </div>
+
+  <details id="help">
+    <summary>¿Cómo sacar la clave sin pagar?</summary>
+    <ol class="hint">
+      <li>Entra a <a href="https://console.cloud.google.com/google/maps-apis/start" target="_blank" rel="noopener">Google Maps Platform</a> y crea un proyecto (pide tarjeta, pero no cobra dentro del cupo gratis).</li>
+      <li>Activa <b>Maps JavaScript API</b>, <b>Geocoding API</b>, <b>Routes API</b> y <b>Street View Static API</b>.</li>
+      <li>En <i>Credenciales</i> crea una clave de API. En "Restricciones de aplicaciones" elige <i>Sitios web</i> y pon la dirección de tu página (ej. <code>https://tu-usuario.github.io/*</code>). En "Restricciones de API" deja solo esas 4.</li>
+      <li>Para no pagar nunca: en <i>Cuotas</i> de cada API pon un límite diario (por ejemplo 300 por día).</li>
+    </ol>
+  </details>
+</aside>
+
+<main>
+  <div id="map"><div class="mapph">Pega tu clave de Google y dale «Guardar» para ver el mapa.</div></div>
+  <div class="stage"><canvas id="player" width="1280" height="720"></canvas></div>
+</main>
+</div>
+
+<script src="config.js"></script>
+<script src="js/utilidades.js" defer></script>
+<script src="js/google.js" defer></script>
+<script src="js/mapa.js" defer></script>
+<script src="js/recorrido.js" defer></script>
+<script src="js/video.js" defer></script>
+<script src="js/inicio.js" defer></script>
+</body>
+</html>
