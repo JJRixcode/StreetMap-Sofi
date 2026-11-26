@@ -1,11 +1,18 @@
-// Configuración opcional.
+// Configuración.
 //
-// Si dejas apiKey vacío, cada persona pega su propia clave en la app
-// (se guarda solo en su navegador). Es la opción más segura.
+// mapillaryToken: el "Client Token" de tu app en Mapillary (empieza por "MLY|").
+// Es un token de solo lectura pensado para usarse en páginas web, así que se
+// puede dejar aquí aunque el repositorio sea público. Si lo dejas vacío, la app
+// le pide el token a cada persona (y lo guarda solo en su navegador).
 //
-// Si pones tu clave aquí, la app ya no la pide. Hazlo SOLO si en Google Cloud
-// restringiste la clave a tu sitio (ej: https://TU-USUARIO.github.io/*) y le
-// pusiste límites diarios, porque este archivo queda público.
+// ciudad: zona donde se buscan primero las direcciones y donde arranca el mapa.
 window.CONFIG = {
-  apiKey: ""
+  mapillaryToken: "",
+  ciudad: {
+    nombre: "Medellín",
+    centro: [6.2442, -75.5812],
+    zoom: 13,
+    // oeste, norte, este, sur (Valle de Aburrá)
+    caja: [-75.72, 6.45, -75.33, 5.98]
+  }
 };

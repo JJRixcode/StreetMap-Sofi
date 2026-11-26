@@ -66,7 +66,7 @@ function renderAt(t){
   let i=segs.length-1;
   if(t<segs[0].start)i=0;else for(let k=0;k<segs.length;k++){if(t<segs[k].start+segs[k].dur){i=k;break}}
   const s=segs[i], p=Math.max(0,Math.min(1,(t-s.start)/s.dur));
-  const next=segs[i+1], walking=next&&!next.f.turn&&next.f.pano!==s.f.pano;
+  const next=segs[i+1], walking=next&&!next.f.turn&&next.f.id!==s.f.id;
   const zoom=1+(walking?0.14*p:0);
   ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);
   drawImg(s.f.img,zoom,1);
@@ -90,8 +90,9 @@ function renderAt(t){
   }
   miniMap(d,u);
   ctx.font=`500 ${Math.round(17*u)}px system-ui,sans-serif`;ctx.textAlign="right";ctx.textBaseline="bottom";
-  ctx.lineWidth=3*u;ctx.strokeStyle="rgba(0,0,0,.6)";ctx.strokeText("Imágenes © Google",W-m,H-m*0.8);
-  ctx.fillStyle="#fff";ctx.fillText("Imágenes © Google",W-m,H-m*0.8);
+  const credit="Fotos: Mapillary (CC BY-SA)";
+  ctx.lineWidth=3*u;ctx.strokeStyle="rgba(0,0,0,.6)";ctx.strokeText(credit,W-m,H-m*0.8);
+  ctx.fillStyle="#fff";ctx.fillText(credit,W-m,H-m*0.8);
   // intro / final
   if(t<INTRO){
     const a=t<INTRO-500?1:(INTRO-t)/500;

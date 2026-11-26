@@ -56,3 +56,4 @@ const fmtDist = m => m<1000?Math.round(m)+" m":(m/1000).toFixed(1).replace(".","
 const fmtTime = m => {const min=Math.max(1,Math.round(m/80));return min<60?min+" min":Math.floor(min/60)+" h "+(min%60)+" min"};
 const isPhone = () => matchMedia("(max-width:860px)").matches;
 function setMsg(el,text,kind){el.textContent=text||"";el.className="msg"+(kind?" "+kind:"")}
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
