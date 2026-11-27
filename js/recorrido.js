@@ -37,7 +37,7 @@ const fmtDur=ms=>{const s=Math.round(ms/1000);return s<60?s+" s":Math.floor(s/60
 ["format","step"].forEach(id=>$(id).addEventListener("change",()=>{
   if(state.frames){invalidateFrames();setMsg($("videoMsg"),"Cambiaste opciones: vuelve a preparar el recorrido.")}
   if(id==="format")sizeCanvas();
-  if(id==="step"&&state.path)setMsg($("routeMsg"),"El video usará unas "+(Math.ceil(state.path.length/+$("step").value)+1)+" fotos de Street View.","ok");
+  if(id==="step"&&state.path){const [aviso,tipo]=avisoFotos(Math.ceil(state.path.length/+$("step").value)+1);setMsg($("routeMsg"),aviso,tipo)}
 }));
 function progress(f){const b=$("bar");b.style.display=f==null?"none":"block";b.firstChild.style.width=((f||0)*100)+"%"}
 
@@ -87,9 +87,27 @@ $("prepBtn").onclick=async()=>{
       }
       shots.push({...s,turn:0});
     });
-    // 5) Descargar las fotos
+    // 5) Preguntar al contador del mes si alcanzan (solo las fotos que no están ya en memoria)
+    const nuevas=[...new Set(shots.map(s=>svUrl(s.id,s.heading,fmt)))].filter(u=>!imgCache.has(u));
+    let reservadas=0;
+    if(nuevas.length&&CFG.contador){
+      setMsg($("prepMsg"),"Revisando cuántas fotos te quedan este mes…");
+      let r;
+      try{r=await contador("reservar",nuevas.length)}
+      catch(e){throw new Error("No pude revisar cuántas fotos te quedan este mes. Revisa tu internet e intenta otra vez.")}
+      if(!r.ok)throw new Error(/alcanzan/.test(r.error||"")
+        ?"Este recorrido necesita "+nuevas.length+" fotos y solo te quedan "+numero(r.quedan)+" este mes. Prueba «20 m (menos fotos)» o una ruta más corta."
+        :"El contador de fotos respondió: "+(r.error||"error"));
+      reservadas=nuevas.length;
+    }
+    // 6) Descargar las fotos (las que no se pudieron bajar se devuelven al contador)
     setMsg($("prepMsg"),"Descargando "+shots.length+" fotos…");
-    const imgs=await pool(shots,6,s=>svImage(s.id,s.heading,fmt),k=>progress(0.35+k/shots.length*0.65));
+    let imgs;
+    try{imgs=await pool(shots,6,s=>svImage(s.id,s.heading,fmt),k=>progress(0.35+k/shots.length*0.65))}
+    finally{
+      const sobran=reservadas-nuevas.filter(u=>imgCache.has(u)).length;
+      if(sobran>0)contador("devolver",sobran).catch(()=>{});
+    }
     if(state.path!==path)throw new Error("Cambiaste la ruta mientras se preparaba. Vuelve a preparar el recorrido.");
     const frames=shots.map((s,i)=>({...s,img:imgs[i]})).filter(f=>f.img);
     if(frames.length<2)throw new Error("No se pudieron descargar las fotos de Street View.");
@@ -101,7 +119,7 @@ $("prepBtn").onclick=async()=>{
     $("playBtn").disabled=$("recBtn").disabled=false;
     renderAt(0);
     $("prepBtn").hidden=true;$("openBtn").hidden=false;
-    setMsg($("videoMsg"),"Video listo: "+resumen+".","ok");
+    setMsg($("videoMsg"),"Video listo: "+resumen+"."+textoQuedan(),"ok");
   }catch(e){progress(null);modalState("error");setMsg($("prepMsg"),explain(e),"err");setMsg($("videoMsg"),explain(e),"err")}
   preparing=false;$("prepBtn").textContent="Preparar recorrido";
 };

@@ -120,7 +120,7 @@ async function route(){
       return b||true;
     }
     const est=Math.ceil(state.path.length/+$("step").value)+1;
-    setMsg($("routeMsg"),"Listo. El video usará unas "+est+" fotos de Street View.","ok");
+    const [aviso,tipo]=avisoFotos(est);setMsg($("routeMsg"),aviso,tipo);
     $("prepBtn").disabled=false;
     return b||true;
   }catch(e){

@@ -94,15 +94,40 @@ async function svMeta(pos,radius){
   throw new Error(r.error_message||r.status);
 }
 const imgCache=new Map();
-async function svImage(pano,heading,fmt){
+function svUrl(pano,heading,fmt){
   const [w,h,fov]=fmt==="v"?[360,640,62]:[640,360,90];
   const p=new URLSearchParams({size:w+"x"+h,pano,heading:heading.toFixed(1),pitch:"0",fov:String(fov),
     return_error_code:"true",key:key()});
-  const url="https://maps.googleapis.com/maps/api/streetview?"+p;
+  return "https://maps.googleapis.com/maps/api/streetview?"+p;
+}
+async function svImage(pano,heading,fmt){
+  const url=svUrl(pano,heading,fmt);
   if(imgCache.has(url))return imgCache.get(url);
   const res=await fetch(url);
   if(!res.ok){if(res.status===403||res.status===429)throw new Error(await res.text()||("Error "+res.status));return null}
   const bmp=await createImageBitmap(await res.blob());
   imgCache.set(url,bmp);
   return bmp;
+}
+
+/* ---------- Contador de fotos del mes (Google Apps Script) ----------
+   Lleva la cuenta en un solo lugar para todos los dispositivos. Solo cuenta: las fotos
+   se siguen bajando directo de Google. Sin CONFIG.contador no hay límite mensual. */
+let fotosQuedan=null;
+async function contador(accion,n){
+  if(!CFG.contador)return null;
+  const q=new URLSearchParams({accion});if(n)q.set("n",String(n));
+  const r=await fetch(CFG.contador+"?"+q,{cache:"no-store"});
+  if(!r.ok)throw new Error("Contador: error "+r.status);
+  const j=await r.json();
+  if(typeof j.quedan==="number")fotosQuedan=j.quedan;
+  return j;
+}
+const numero=n=>n.toLocaleString("es-CO");
+const textoQuedan=()=>fotosQuedan==null?"":" Te quedan "+numero(fotosQuedan)+" fotos este mes.";
+// Mensaje con las fotos que usará la ruta (y si alcanzan las del mes)
+function avisoFotos(est){
+  if(fotosQuedan!=null&&est>fotosQuedan)
+    return ["Esta ruta necesita unas "+est+" fotos y solo te quedan "+numero(fotosQuedan)+" este mes. Prueba «20 m (menos fotos)» o una ruta más corta.","err"];
+  return ["Listo. El video usará unas "+est+" fotos de Street View."+textoQuedan(),"ok"];
 }

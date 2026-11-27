@@ -33,6 +33,7 @@ Proyecto **StreetMap Sofi** (`streetmap-sofi`) con facturación activa. La clave
 **Protecciones para no pagar:**
 
 - La clave solo funciona desde `https://jjrixcode.github.io/*` (y `http://localhost:8000/*` para pruebas).
+- **Contador mensual de fotos** (Google Apps Script, código en `apps-script/contador.gs`): antes de bajar las fotos de un recorrido, la app le pregunta si alcanzan. Lleva la cuenta del mes en un solo lugar para todos los dispositivos, con tope de 9.900 (el cupo gratis es 10.000) y se reinicia solo el día 1 a medianoche, hora del Pacífico. Si no alcanzan, la app avisa y no baja nada. Solo cuenta las fotos nuevas y devuelve las que no se pudieron bajar. Para igualarlo con lo que ya contó Google, se ejecuta `fijarUsadoEsteMes` en el editor del script.
 - Límites diarios, cerca del cupo gratis mensual de Google (unos 10.000 usos por API al mes):
 
 | Cuota | Límite al día |
@@ -75,13 +76,14 @@ En `index.html`, el CSS y los JS llevan un número de versión (`?v=2`). Cada ve
 
 ```
 index.html          Página principal
-config.js           Clave de Google y ciudad
+config.js           Clave de Google, contador de fotos y ciudad
 css/estilos.css     Diseño (computador y celular)
 js/utilidades.js    Cálculos de distancias y rumbos
 js/servicios.js     Google: sugerencias, ruta a pie y Street View
 js/mapa.js          Mapa, puntos y ruta
 js/sugerencias.js   Lista de sugerencias mientras escribes
 js/hoja.js          Hoja inferior del celular (se sube y se baja)
+apps-script/contador.gs  Contador de fotos del mes (se pega en script.google.com)
 js/recorrido.js     Busca y baja las fotos de Street View
 js/video.js         Dibuja, reproduce y graba el video
 js/inicio.js        Arranque de la app
