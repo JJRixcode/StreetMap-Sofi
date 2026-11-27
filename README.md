@@ -8,7 +8,7 @@ Todo es **gratis y sin tarjeta**: usa OpenStreetMap para el mapa, la búsqueda y
 
 ## Qué hace
 
-- Busca las dos direcciones o lugares, o los marcas tocando el mapa.
+- Mientras escribes, **sugiere lugares y direcciones** (como Google Maps). También puedes marcar los puntos tocando el mapa.
 - Calcula la ruta a pie.
 - Muestra en **verde** las calles que tienen fotos. Si la ruta va por calles sin fotos, **toca el mapa** sobre una calle verde para que pase por ahí. Los puntos se pueden arrastrar y, si tocas uno, se quita.
 - Elige una foto cada pocos metros: cerca de la ruta, mirando hacia donde vas, reciente y, si se puede, de la misma secuencia que la anterior para que el video se vea continuo.
@@ -21,7 +21,7 @@ Todo es **gratis y sin tarjeta**: usa OpenStreetMap para el mapa, la búsqueda y
 | Para qué | Servicio | ¿Pide registro? |
 |---|---|---|
 | Mapa | Teselas de [OpenStreetMap](https://www.openstreetmap.org) con [Leaflet](https://leafletjs.com) | No |
-| Buscar direcciones | [Photon](https://photon.komoot.io) y, si no encuentra, [Nominatim](https://nominatim.org) | No |
+| Buscar y sugerir direcciones | [Photon](https://photon.komoot.io) y, si no encuentra, [Nominatim](https://nominatim.org). Opcional: [TomTom](https://developer.tomtom.com) | No (TomTom: clave gratis) |
 | Ruta a pie | [OSRM de OpenStreetMap Alemania](https://routing.openstreetmap.de) | No |
 | Fotos y calles en verde | [Mapillary](https://www.mapillary.com) | Sí: token gratis |
 
@@ -50,9 +50,13 @@ window.CONFIG = {
 
 En `config.js` también está la ciudad donde se buscan primero las direcciones (por defecto, Medellín y el Valle de Aburrá).
 
+### Mejores direcciones con TomTom (opcional)
+
+Los datos gratis de OpenStreetMap encuentran bien muchos lugares (centros comerciales, estaciones, barrios), pero en Medellín tienen pocas direcciones exactas y les faltan sitios como el Parque Lleras. Si pones una clave gratis de [TomTom](https://developer.tomtom.com) (no pide tarjeta, 2.500 búsquedas al día) en `tomtomKey` de `config.js`, la app usa TomTom para las sugerencias y deja OpenStreetMap como respaldo.
+
 ## Uso
 
-1. Escribe **Desde** y **Hasta**, o toca **📍 Mapa** y marca el punto. Funciona mejor con lugares conocidos. Si una dirección tipo «Calle 10 # 43A-20» queda corrida, arrastra el punto.
+1. Escribe **Desde** y **Hasta** y elige de la lista de sugerencias, o toca **📍 Mapa** y marca el punto. Al elegir los dos, la ruta se calcula sola. Si una dirección tipo «Calle 10 # 43A-20» queda corrida, arrastra el punto.
 2. **Calcular ruta a pie.** Si la ruta va por calles sin verde, toca el mapa sobre una calle verde.
 3. Elige formato y velocidad, y dale **Preparar recorrido**. Si hay tramos sin fotos, la app te avisa.
 4. **▶ Ver** para revisarlo y **⬇ Descargar video** para grabarlo. En el celular aparece **Compartir** para mandarlo directo por WhatsApp.
@@ -80,6 +84,7 @@ config.js           Token de Mapillary y ciudad
 css/estilos.css     Diseño (computador y celular)
 js/utilidades.js    Cálculos de distancias y rumbos
 js/servicios.js     Búsqueda, rutas y consultas a Mapillary
+js/sugerencias.js   Lista de sugerencias mientras escribes
 js/panoramica.js    Recorta las fotos 360° hacia donde vas
 js/mapa.js          Mapa, puntos, ruta y calles con fotos
 js/recorrido.js     Elige y baja las fotos a lo largo de la ruta

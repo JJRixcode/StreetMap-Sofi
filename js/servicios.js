@@ -27,36 +27,92 @@ function nominatim(path,params){
   const p=nomQueue.then(run,run);nomQueue=p.catch(()=>{});
   return p;
 }
-const geoCache=new Map();
+/* ---------- Buscar lugares y direcciones ----------
+   suggest(q) devuelve varias opciones [{pos,name,detail}] para la lista de sugerencias.
+   Si config.js tiene tomtomKey se usa TomTom (mejores direcciones en Colombia);
+   si no, Photon (OpenStreetMap). */
+const sugCache=new Map();
+const VIAS={calle:"Calle",cl:"Calle",cll:"Calle",clle:"Calle",carrera:"Carrera",cra:"Carrera",cr:"Carrera",kr:"Carrera",kra:"Carrera",crr:"Carrera",
+  avenida:"Avenida",av:"Avenida",avda:"Avenida",circular:"Circular",cq:"Circular",cir:"Circular",transversal:"Transversal",tv:"Transversal",tr:"Transversal",
+  diagonal:"Diagonal",dg:"Diagonal"};
+const normTxt=s=>(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
+/* "Cra 70 #44-20" → {via:"Carrera 70", texto:"Carrera 70 44-20"} */
+function parseDireccion(q){
+  const m=q.trim().match(/^([a-záéíóú]+)\.?\s*(\d+\s*[a-z]?(?:\s*bis)?(?:\s*sur)?)\s*(?:#|n[°º]|no\.?|numero|número)?\s*(\d+\s*[a-z]?(?:\s*bis)?)\s*-\s*(\d+)\s*(sur)?\b(.*)$/i);
+  if(!m)return null;
+  const tipo=VIAS[normTxt(m[1])];if(!tipo)return null;
+  const via=tipo+" "+m[2].replace(/\s+/g,"").toUpperCase().replace("BIS"," Bis").replace("SUR"," Sur");
+  const cruce=m[3].replace(/\s+/g,"").toUpperCase();
+  return {via,cruce,texto:via+" "+cruce+"-"+m[4]+(m[5]?" Sur":"")+(m[6]||"")};
+}
+async function suggest(q,limit=6){
+  q=q.trim();if(q.length<3)return [];
+  const k=q+"|"+limit;if(sugCache.has(k))return sugCache.get(k);
+  const dir=parseDireccion(q);
+  let out=[];
+  if(CFG.tomtomKey){try{out=await tomtom(dir?dir.texto:q,limit)}catch(e){out=[]}}
+  if(!out.length){
+    out=await photonSearch(dir?dir.texto:q.replace(/\s*(#|n[°º]|no\.)\s*/gi," "),limit);
+    if(dir){
+      // primero las que quedan sobre la misma vía y cerca de la calle que cruza
+      const v=normTxt(dir.via), c=normTxt(dir.cruce);
+      const score=r=>{
+        const hn=normTxt(r.housenumber).replace(/[#\s]/g,""), nm=normTxt(r.name);
+        let s=normTxt(r.street)===v?0:3;
+        s+=(hn===c||hn.startsWith(c+"-"))?0:hn.startsWith(c)?0.5:1.5;   // 44-20 mejor que 44B-13
+        // "Calle 44 x Carrera 70" = la esquina: el nombre trae la vía y la calle que cruza
+        if(nm.includes(v)&&new RegExp("(calle|carrera|avenida|circular|transversal|diagonal) "+c+"\\b").test(nm.replace(v,"")))s-=2;
+        return s;
+      };
+      out.sort((a,b)=>score(a)-score(b));
+    }
+  }
+  sugCache.set(k,out);
+  return out;
+}
 async function geocode(q){
   const ll=q.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
   if(ll)return {pos:[+ll[1],+ll[2]],name:q.trim()};
   const gmUrl=q.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
   if(gmUrl)return {pos:[+gmUrl[1],+gmUrl[2]],name:"Punto del mapa"};
-  if(geoCache.has(q))return geoCache.get(q);
-  // "Calle 10 # 43A-20" → "Calle 10 43A-20": el # confunde al buscador
-  const clean=q.replace(/\s*(#|n[°º]|no\.)\s*/gi," ").replace(/\s+/g," ").trim();
-  // 1) Photon: entiende mejor "Carrera 70 44-20" y nombres de lugares
-  let out=null;
-  try{out=await photon(clean)}catch(e){}
-  // 2) Nominatim, solo dentro de la ciudad (fuera de ella confunde lugares con el mismo nombre)
-  if(!out){
-    const r=await nominatim("search",{q:clean,countrycodes:"co",limit:"1",addressdetails:"1",viewbox:CIUDAD.caja.join(","),bounded:"1"});
-    if(r.length)out={pos:[+r[0].lat,+r[0].lon],name:shortPlace(r[0])};
+  let r=await suggest(q,1);
+  if(!r.length){
+    const n=await nominatim("search",{q:q.replace(/\s*(#|n[°º]|no\.)\s*/gi," "),countrycodes:"co",limit:"1",addressdetails:"1",viewbox:CIUDAD.caja.join(","),bounded:"1"});
+    if(n.length)r=[{pos:[+n[0].lat,+n[0].lon],name:shortPlace(n[0])}];
   }
-  if(!out)throw new Error("No encontré «"+q+"» en "+CIUDAD.nombre+". Prueba con un lugar conocido cerca, o elige el punto en el mapa.");
-  geoCache.set(q,out);
-  return out;
+  if(!r.length)throw new Error("No encontré «"+q+"» en "+CIUDAD.nombre+". Escribe más despacio y elige de la lista, o marca el punto en el mapa.");
+  return r[0];
 }
 const [W_,N_,E_,S_]=CIUDAD.caja;
-async function photon(q){
-  const res=await fetch("https://photon.komoot.io/api/?"+new URLSearchParams({q,limit:"1",
+async function photonSearch(q,limit){
+  const res=await fetch("https://photon.komoot.io/api/?"+new URLSearchParams({q,limit:String(limit+2),
     bbox:[W_,S_,E_,N_].join(","),lat:CIUDAD.centro[0],lon:CIUDAD.centro[1]}));
-  if(!res.ok)return null;
-  const f=(await res.json()).features||[];
-  if(!f.length)return null;
-  const c=f[0].geometry.coordinates;
-  return {pos:[c[1],c[0]],name:photonName(f[0].properties)};
+  if(!res.ok)return [];
+  const seen=new Set(), out=[];
+  for(const f of (await res.json()).features||[]){
+    const p=f.properties, c=f.geometry.coordinates;
+    const name=p.name||(p.street?(p.street+(p.housenumber?" "+p.housenumber:"")):"");
+    if(!name)continue;
+    const key=normTxt(name)+"|"+c[1].toFixed(3)+"|"+c[0].toFixed(3);
+    if(seen.has(key))continue;seen.add(key);
+    const street=p.street&&p.name?(p.street+(p.housenumber?" "+p.housenumber:"")):"";
+    out.push({pos:[c[1],c[0]],name,detail:[street,p.district||p.locality,p.city].filter(Boolean).join(", "),
+      street:p.street||(p.osm_key==="highway"?p.name:""),housenumber:p.housenumber||""});
+    if(out.length>=limit)break;
+  }
+  return out;
+}
+async function tomtom(q,limit){
+  const res=await fetch("https://api.tomtom.com/search/2/search/"+encodeURIComponent(q)+".json?"+new URLSearchParams({
+    key:CFG.tomtomKey,typeahead:"true",limit:String(limit),countrySet:"CO",language:"es-419",
+    lat:CIUDAD.centro[0],lon:CIUDAD.centro[1],radius:"40000"}));
+  if(!res.ok)throw new Error("TomTom "+res.status);
+  return ((await res.json()).results||[]).map(r=>{
+    const a=r.address||{}, calle=a.streetName?(a.streetName+(a.streetNumber?" # "+a.streetNumber:"")):"";
+    const name=r.poi?r.poi.name:(calle||a.freeformAddress);
+    return {pos:[r.position.lat,r.position.lon],name,
+      detail:[r.poi?calle:"",a.municipalitySubdivision,a.municipality].filter(Boolean).join(", ")};
+  });
 }
 function photonName(p){
   const street=p.street?(p.street+(p.housenumber?" "+p.housenumber:"")):"";

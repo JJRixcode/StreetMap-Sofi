@@ -29,7 +29,7 @@
     <h2>2 · Direcciones</h2>
     <label for="from">Desde</label>
     <div class="row">
-      <input type="text" id="from" placeholder="Ej: Parque Lleras">
+      <input type="text" id="from" placeholder="Ej: Unicentro o Cra 70 # 44-20">
       <button class="pick" data-pick="from" title="Elegir en el mapa">📍 Mapa</button>
     </div>
     <label for="to">Hasta</label>
@@ -37,7 +37,7 @@
       <input type="text" id="to" placeholder="Lugar o dirección de destino">
       <button class="pick" data-pick="to" title="Elegir en el mapa">📍 Mapa</button>
     </div>
-    <p class="hint">Funciona mejor con lugares conocidos (un parque, un centro comercial, una estación). Las direcciones tipo «Calle 10 # 43A-20» a veces quedan lejos: revisa el punto y <b>arrástralo</b> si hace falta, o usa <b>📍 Mapa</b>.</p>
+    <p class="hint">Escribe y <b>elige de la lista</b>: un lugar (Unicentro, Estación Poblado…) o una dirección (Cra 70 # 44-20). Si el punto queda corrido, <b>arrástralo</b> en el mapa o usa <b>📍 Mapa</b>.</p>
     <button class="primary" id="routeBtn">Calcular ruta a pie</button>
     <div class="stats" id="routeStats" hidden>
       <span><b id="stDist">–</b> recorrido</span>
@@ -125,6 +125,7 @@
 <script src="js/servicios.js" defer></script>
 <script src="js/panoramica.js" defer></script>
 <script src="js/mapa.js" defer></script>
+<script src="js/sugerencias.js" defer></script>
 <script src="js/recorrido.js" defer></script>
 <script src="js/video.js" defer></script>
 <script src="js/inicio.js" defer></script>

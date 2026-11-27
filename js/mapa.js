@@ -138,4 +138,8 @@ $("routeBtn").onclick=async()=>{
     if(b&&isPhone())$("map").scrollIntoView({behavior:"smooth",block:"start"});
   }catch(e){setMsg($("routeMsg"),explain(e),"err")}
 };
-["from","to"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter")$("routeBtn").click()}));
+["from","to"].forEach(id=>$(id).addEventListener("keydown",e=>{
+  if(e.key!=="Enter")return;
+  const l=$("sugg-"+id);if(l&&!l.hidden)return; // Enter elige la sugerencia
+  $("routeBtn").click();
+}));
