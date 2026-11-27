@@ -139,8 +139,8 @@ function play(onEnd){
 function stopPlayback(){playing=false;cancelAnimationFrame(raf);$("playBtn").textContent="▶ Ver"}
 $("playBtn").onclick=()=>{
   if(playing){stopPlayback();return}
-  $("playBtn").textContent="■ Detener";
   play(()=>{$("playBtn").textContent="▶ Ver"});
+  $("playBtn").textContent="■ Detener"; // después de play(), que reinicia el texto
 };
 function pickMime(){
   const c=["video/mp4;codecs=avc1.640028","video/mp4;codecs=avc1.42E01E","video/mp4","video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"];
@@ -171,13 +171,13 @@ $("recBtn").onclick=()=>{
     if(!isPhone())a.click();
     $("dl").scrollIntoView({behavior:"smooth",block:"nearest"});
     setMsg($("prepMsg"),"Video listo."+(ext==="webm"?" Salió en WebM: WhatsApp a veces no lo acepta; desde Chrome o Safari actualizados sale en MP4.":""),"ok");
-    $("recBtn").disabled=$("playBtn").disabled=$("prepBtn").disabled=false;
+    $("recBtn").disabled=$("playBtn").disabled=$("modalClose").disabled=false;
     $("recBtn").textContent="⬇ Descargar video";
   };
-  $("recBtn").disabled=$("playBtn").disabled=$("prepBtn").disabled=true;
+  $("recBtn").disabled=$("playBtn").disabled=$("modalClose").disabled=true;
   $("recBtn").textContent="● Grabando…";
   $("dl").style.display="none";
-  setMsg($("prepMsg"),"Grabando ("+Math.round(timeline.total/1000)+" s). No cambies de pestaña.");
+  setMsg($("prepMsg"),"Grabando ("+fmtDur(timeline.total)+"). No cierres esta ventana ni cambies de pestaña.");
   renderAt(0);
   holdWake();
   recorder.start(1000);

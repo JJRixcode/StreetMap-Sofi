@@ -1,4 +1,4 @@
-# Ruta a pie en Street View
+# Mapa para Sofia
 
 Página web para explicar cómo llegar caminando a una dirección. Pones de dónde sales y a dónde vas, y la app genera un **video caminando por Google Street View** con un mapita, los giros y la distancia que falta. El video se descarga en MP4 o se comparte directo a WhatsApp desde el celular.
 
@@ -43,16 +43,16 @@ Proyecto **StreetMap Sofi** (`streetmap-sofi`) con facturación activa. La clave
 | Geocoding | 300 |
 | Routes: rutas | 300 |
 
-Una ruta de 1 km usa unas 110 a 130 fotos, así que alcanzan **2 o 3 videos al día**. Si se llega al límite, la app deja de funcionar ese día en vez de cobrar. Para más videos se sube el límite en *Google Maps Platform → Cuotas* (lo que pase del cupo gratis se cobra).
+Con fotos cada 14 m (lo normal), una ruta de 1 km usa unas 75 a 90 fotos, así que alcanzan **unos 4 videos al día**. Si se llega al límite, la app deja de funcionar ese día en vez de cobrar. Para más videos se sube el límite en *Google Maps Platform → Cuotas* (lo que pase del cupo gratis se cobra).
 
 ## Uso
 
-1. Escribe **Desde** y **Hasta** y elige de la lista, o toca **Mapa** y marca el punto.
+1. Escribe **Desde** y **Hasta** y elige de la lista, o toca **Mapa** y marca el punto. Para salir desde donde estás, toca **Salir desde mi ubicación** (el navegador pide permiso la primera vez).
 2. Revisa la ruta. Si quieres otro camino, toca el mapa para agregar puntos.
-3. Elige formato y velocidad, y dale **Preparar recorrido**.
-4. **▶ Ver** para revisarlo y **⬇ Descargar video** para grabarlo. En el celular aparece **Compartir** para mandarlo directo por WhatsApp.
+3. Elige formato y velocidad, y dale **Preparar recorrido**. Se abre una ventana con el bebé bailando mientras baja las fotos (puedes cerrarla: sigue preparándose).
+4. Cuando está listo aparece el gato con el video: **▶ Ver** para revisarlo y **⬇ Descargar video** para grabarlo. En el celular aparece **Compartir** para mandarlo directo por WhatsApp. Si cierras la ventana, el botón **▶ Ver video** del panel la vuelve a abrir.
 
-Mientras graba, deja la página abierta: el video se graba en tiempo real.
+Mientras graba, deja la ventana abierta (no se puede cerrar hasta que termine): el video se graba en tiempo real.
 
 ## Probarla en tu computador
 
@@ -84,7 +84,12 @@ js/sugerencias.js   Lista de sugerencias mientras escribes
 js/recorrido.js     Busca y baja las fotos de Street View
 js/video.js         Dibuja, reproduce y graba el video
 js/inicio.js        Arranque de la app
-iconos/icono.svg    Ícono de la pestaña
+iconos/sofi.png     Logo (Sofi, sin fondo)
+iconos/favicon.png  Ícono de la pestaña
+iconos/apple-touch-icon.png  Ícono al agregarla a la pantalla del celular
+iconos/capi-a.svg   Capibara del punto A (también capi-b.svg para B)
+iconos/bebe.webp    Bebé de la ventana mientras se prepara el video
+iconos/gato.webp    Gato de la ventana cuando el video está listo
 ```
 
 ## Nota sobre las imágenes

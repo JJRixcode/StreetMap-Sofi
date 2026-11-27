@@ -5,22 +5,24 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
 <meta name="theme-color" content="#ffffff">
-<title>Ruta a pie en Street View</title>
+<title>Mapa para Sofia</title>
 <meta name="description" content="Genera un video caminando por Google Street View desde una dirección hasta otra.">
-<link rel="icon" href="iconos/icono.svg" type="image/svg+xml">
+<link rel="icon" href="iconos/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/estilos.css?v=3">
+<link rel="stylesheet" href="css/estilos.css?v=8">
+<link rel="preload" as="image" href="iconos/gato.webp?v=2">
 </head>
 <body>
 <div class="app">
 <aside>
   <header class="top">
-    <img src="iconos/icono.svg" alt="" width="40" height="40">
+    <img src="iconos/sofi.png" alt="Sofia" width="421" height="512">
     <div>
-      <h1>Ruta a pie en Street View</h1>
-      <p class="sub">Pon dos direcciones y genera un video caminando.</p>
+      <h1>Mapa <span>para Sofia</span></h1>
+      <p class="sub">Pon dos direcciones y genera un video caminando hasta allá.</p>
     </div>
   </header>
 
@@ -28,7 +30,7 @@
     <h2><span class="num">1</span>Direcciones</h2>
     <div class="dirs">
       <div class="field">
-        <span class="dot a" aria-hidden="true">A</span>
+        <img class="capi" src="iconos/capi-a.svg?v=2" alt="" aria-hidden="true" width="40" height="35">
         <label for="from" class="vh">Desde</label>
         <div class="row">
           <input type="text" id="from" placeholder="Desde: lugar o dirección" autocomplete="off">
@@ -36,7 +38,7 @@
         </div>
       </div>
       <div class="field">
-        <span class="dot b" aria-hidden="true">B</span>
+        <img class="capi" src="iconos/capi-b.svg?v=2" alt="" aria-hidden="true" width="40" height="35">
         <label for="to" class="vh">Hasta</label>
         <div class="row">
           <input type="text" id="to" placeholder="Hasta: lugar o dirección" autocomplete="off">
@@ -44,6 +46,7 @@
         </div>
       </div>
     </div>
+    <button class="locate" id="myLocBtn" type="button" title="Usar mi ubicación como punto de partida (A)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg><span>Salir desde mi ubicación</span></button>
     <p class="hint">Escribe y <b>elige de la lista</b>: un lugar (Unicentro, Estación Poblado…) o una dirección (Cl 10 # 43A-20). Si el punto queda corrido, <b>arrástralo</b> en el mapa o usa el botón <b>Mapa</b>.</p>
     <button class="primary" id="routeBtn">Calcular ruta a pie</button>
     <div class="stats" id="routeStats" hidden>
@@ -69,9 +72,9 @@
       <div>
         <label for="speed">Velocidad</label>
         <select id="speed">
-          <option value="1100">Lenta</option>
-          <option value="750" selected>Normal</option>
-          <option value="480">Rápida</option>
+          <option value="1650">Lenta</option>
+          <option value="1100" selected>Normal</option>
+          <option value="750">Rápida</option>
         </select>
       </div>
     </div>
@@ -79,9 +82,8 @@
       <div>
         <label for="step">Foto cada</label>
         <select id="step">
-          <option value="6">6 m (más fluido)</option>
-          <option value="9" selected>9 m</option>
-          <option value="14">14 m</option>
+          <option value="9">9 m (más fluido)</option>
+          <option value="14" selected>14 m</option>
           <option value="20">20 m (menos fotos)</option>
         </select>
       </div>
@@ -94,34 +96,53 @@
       </div>
     </div>
     <button class="primary" id="prepBtn" disabled>Preparar recorrido</button>
-    <div class="bar" id="bar"><i></i></div>
-    <div class="msg" id="prepMsg"></div>
-    <div class="btns">
-      <button id="playBtn" disabled>▶ Ver</button>
-      <button id="recBtn" disabled>⬇ Descargar video</button>
-    </div>
-    <div class="dl" id="dl">
-      <a id="dlLink" href="#">Guardar video</a>
-      <button id="shareBtn" hidden>Compartir (WhatsApp, etc.)</button>
-    </div>
-    <p class="hint">Mientras se graba, deja la página abierta y la pantalla encendida: el video se graba en tiempo real.</p>
+    <button class="primary" id="openBtn" hidden>▶ Ver video</button>
+    <div class="msg" id="videoMsg"></div>
   </section>
 
 </aside>
 
 <main>
   <div id="map"></div>
-  <div class="stage"><canvas id="player" width="1280" height="720"></canvas></div>
 </main>
 </div>
 
-<script src="config.js?v=3"></script>
-<script src="js/utilidades.js?v=3" defer></script>
-<script src="js/servicios.js?v=3" defer></script>
-<script src="js/mapa.js?v=3" defer></script>
-<script src="js/sugerencias.js?v=3" defer></script>
-<script src="js/recorrido.js?v=3" defer></script>
-<script src="js/video.js?v=3" defer></script>
-<script src="js/inicio.js?v=3" defer></script>
+<!-- Ventana del video: bebé mientras se prepara, gato cuando está listo -->
+<div class="modal" id="videoModal" data-estado="preparando" hidden>
+  <div class="modal-fondo"></div>
+  <div class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button class="modal-x" id="modalClose" type="button" aria-label="Cerrar" title="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+    <div class="modal-head">
+      <img class="mascota" id="mascota" src="iconos/bebe.webp?v=2" alt="">
+      <div>
+        <h2 id="modalTitle">Preparando tu recorrido…</h2>
+        <p class="sub" id="modalSub">Puedes cerrar esta ventana: sigue preparándose.</p>
+      </div>
+    </div>
+    <div class="bar" id="bar"><i></i></div>
+    <div class="msg" id="prepMsg"></div>
+    <div class="listo" id="readyArea" hidden>
+      <div class="stage"><canvas id="player" width="1280" height="720"></canvas></div>
+      <div class="btns">
+        <button id="playBtn" disabled>▶ Ver</button>
+        <button class="primary" id="recBtn" disabled>⬇ Descargar video</button>
+      </div>
+      <div class="dl" id="dl">
+        <a id="dlLink" href="#">Guardar video</a>
+        <button id="shareBtn" hidden>Compartir (WhatsApp, etc.)</button>
+      </div>
+      <p class="hint">Al descargar, el video se graba en tiempo real: deja esta ventana abierta y la pantalla encendida.</p>
+    </div>
+  </div>
+</div>
+
+<script src="config.js?v=8"></script>
+<script src="js/utilidades.js?v=8" defer></script>
+<script src="js/servicios.js?v=8" defer></script>
+<script src="js/mapa.js?v=8" defer></script>
+<script src="js/sugerencias.js?v=8" defer></script>
+<script src="js/recorrido.js?v=8" defer></script>
+<script src="js/video.js?v=8" defer></script>
+<script src="js/inicio.js?v=8" defer></script>
 </body>
 </html>
