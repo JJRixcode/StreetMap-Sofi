@@ -17,7 +17,8 @@ function showCoverage(){
   coverage=L.vectorGrid.protobuf("https://tiles.mapillary.com/maps/vtp/mly1_public/2/{z}/{x}/{y}?access_token="+encodeURIComponent(key()),{
     maxNativeZoom:14,minZoom:6,interactive:false,pane:"overlayPane",
     vectorTileLayerStyles:{
-      sequence:{color:"#05cb63",weight:3,opacity:.75},
+      // Mapillary solo da teselas hasta zoom 14: al acercar se agrandan, por eso la línea es fina
+      sequence:{color:"#05cb63",weight:.8,opacity:.6},
       image:[],overview:[]
     }
   }).addTo(map);

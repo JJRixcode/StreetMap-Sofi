@@ -36,6 +36,8 @@ Los servicios de OpenStreetMap son públicos y tienen reglas de uso justo: sirve
 
 ### ¿Dónde se pone?
 
+Ya está puesto en `config.js`, así que la app no lo pide. Ojo: usa el **Client Token**, no el *Client Secret*. Los dos empiezan por `MLY|`, pero con el secreto el mapa carga y las fotos no aparecen.
+
 - **En la app:** pégalo en la tarjeta «1 · Token de Mapillary» y dale *Guardar*. Se guarda solo en ese navegador.
 - **Fijo en `config.js`**, para que nadie tenga que pegarlo. El *Client Token* es de solo lectura y está hecho para usarse en páginas web, así que se puede dejar en el código:
 

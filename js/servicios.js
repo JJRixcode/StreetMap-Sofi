@@ -107,7 +107,7 @@ async function mly(path,params){
 }
 /* Todas las fotos en una franja de ~25 m a lado y lado de la ruta. */
 async function mlyImagesAlong(path,onProgress){
-  const CHUNK=120, PAD=25, boxes=[];
+  const CHUNK=60, PAD=25, boxes=[]; // cajas pequeñas: en zonas con muchas fotos Mapillary devuelve máximo 2000
   for(let s=0;s<path.length;s+=CHUNK){
     let w=180,e=-180,n=-90,so=90;
     for(let d=s;d<=Math.min(path.length,s+CHUNK);d+=10){

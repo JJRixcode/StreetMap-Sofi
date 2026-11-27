@@ -7,7 +7,7 @@
 //
 // ciudad: zona donde se buscan primero las direcciones y donde arranca el mapa.
 window.CONFIG = {
-  mapillaryToken: "",
+  mapillaryToken: "MLY|30956476237275208|e10df6dac29c77dfe3e4ef2fd5303a0a",
   ciudad: {
     nombre: "Medellín",
     centro: [6.2442, -75.5812],
