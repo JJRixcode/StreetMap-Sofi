@@ -68,6 +68,7 @@ select{appearance:none;-webkit-appearance:none;padding-right:36px;cursor:pointer
 .row{position:relative;display:flex;gap:8px;align-items:center}
 .row input{flex:1;min-width:0}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.two.uno{grid-template-columns:1fr}
 
 /* Botones */
 button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 18px;
@@ -189,11 +190,15 @@ a{color:var(--accent)}
   #routeMsg{order:3}
   #prepBtn,#openBtn{order:4}
   #videoMsg{order:5}
-  #cardVideo>h2{order:6;margin-top:8px}
-  #cardVideo>label,#cardVideo>input,#cardVideo>.two{order:7}
+  /* Los avisos de «listo» (verdes) van en la parte que se despliega; los errores y «calculando…» sí se ven plegada */
+  #routeMsg.ok,#videoMsg.ok{order:6}
+  #cardVideo>h2{order:7;margin-top:8px}
+  #cardVideo>label,#cardVideo>input,#cardVideo>.two{order:8}
   #cardVideo>label{margin-bottom:-6px}
   .hoja .two label{margin-top:0}
-  #routeHint{order:8}
+  #routeHint{order:9}
+  /* Plegada: lo que va en la parte que se despliega no se asoma por el borde */
+  .hoja:not(.abierta) :is(#routeMsg.ok,#videoMsg.ok,#cardVideo>h2,#cardVideo>label,#cardVideo>input,#cardVideo>.two,#routeHint){visibility:hidden}
   input[type=text],select{height:48px;font-size:16px}
   select{padding:0 30px 0 12px;background-position:right 4px center}
   button{height:46px}

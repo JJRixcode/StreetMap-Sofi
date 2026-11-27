@@ -1,5 +1,5 @@
 /* ---------- Celular: hoja inferior que se sube y se baja (como Google Maps) ----------
-   Plegada muestra el logo, el tiempo de la ruta y el botón del video.
+   Plegada muestra el logo, el tiempo de la ruta, el botón del video y los errores (los avisos de «listo» van abajo).
    Abierta muestra también las opciones del video. En computador no hace nada. */
 const hoja=$("hoja"), asa=$("hojaAsa");
 let hojaAbierta=false, ignorarClick=false;
@@ -9,7 +9,7 @@ function altoPlegada(){
   let fondo=0;
   ["#hojaAsa",".top","#routeStats","#routeMsg","#prepBtn","#openBtn","#videoMsg"].forEach(sel=>{
     const el=hoja.querySelector(sel);
-    if(el&&el.offsetParent!==null&&el.offsetHeight)fondo=Math.max(fondo,el.offsetTop+el.offsetHeight);
+    if(el&&el.offsetParent!==null&&el.offsetHeight&&!el.classList.contains("ok"))fondo=Math.max(fondo,el.offsetTop+el.offsetHeight);
   });
   return Math.ceil(fondo+parseFloat(getComputedStyle(hoja).paddingBottom||0));
 }
@@ -18,7 +18,8 @@ function ajustarHoja(){
   if(!isPhone()){raiz.removeProperty("--hoja-plegada");hoja.style.height="";return}
   const plegada=altoPlegada();
   raiz.setProperty("--hoja-plegada",plegada+"px");
-  const libre=window.innerHeight-document.querySelector(".flotante").getBoundingClientRect().bottom-16;
+  // abierta deja ~120 px de mapa a la vista bajo la tarjeta de direcciones (para tocarlo y cerrar)
+  const libre=window.innerHeight-document.querySelector(".flotante").getBoundingClientRect().bottom-120;
   const abierta=Math.max(plegada,Math.min(hoja.scrollHeight,libre));
   hoja.style.height=(hojaAbierta?abierta:plegada)+"px";
   hoja.classList.toggle("abierta",hojaAbierta);
@@ -49,9 +50,24 @@ let y0=null;
   el.addEventListener("pointercancel",()=>{y0=null});
 });
 
+// Como en Google Maps: con la hoja abierta, tocar, mover o acercar el mapa la cierra
+// (y ese toque no agrega un punto a la ruta)
+let tragarHasta=0;
+function alTocarMapa(){
+  if(!isPhone()||!hojaAbierta)return;
+  abrirHoja(false);
+  tragarHasta=Date.now()+700;
+}
+function mapaClickTragado(){return Date.now()<tragarHasta}
+$("map").addEventListener("pointerdown",alTocarMapa,{capture:true});
+$("map").addEventListener("wheel",alTocarMapa,{capture:true,passive:true});
+
 // Recalcular cuando cambia lo que se ve (ruta, mensajes, botones) o el tamaño de la pantalla
 const vigia=new ResizeObserver(()=>requestAnimationFrame(ajustarHoja));
 ["#routeStats","#routeMsg","#prepBtn","#openBtn","#videoMsg",".top"].forEach(sel=>{const el=hoja.querySelector(sel);if(el)vigia.observe(el)});
 vigia.observe(document.querySelector(".flotante"));
+// Los mensajes cambian de lugar según su tipo (listo / error): recalcular también cuando cambia la clase
+const vigiaMsg=new MutationObserver(()=>requestAnimationFrame(ajustarHoja));
+["routeMsg","videoMsg"].forEach(id=>vigiaMsg.observe($(id),{attributes:true,attributeFilter:["class"],childList:true,characterData:true,subtree:true}));
 window.addEventListener("resize",ajustarHoja);
 ajustarHoja();

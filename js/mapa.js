@@ -57,7 +57,7 @@ function drawWaypoints(){
   state.waypoints.forEach((p,i)=>{
     const m=new gm.Marker({map,position:LL(p),draggable:true,icon:wpIcon(),title:"Tócalo para quitarlo",zIndex:5});
     m.addListener("dragend",()=>{state.waypoints[i]=[m.getPosition().lat(),m.getPosition().lng()];route()});
-    m.addListener("click",()=>{state.waypoints.splice(i,1);drawWaypoints();route()});
+    m.addListener("click",()=>{if(window.mapaClickTragado&&mapaClickTragado())return;state.waypoints.splice(i,1);drawWaypoints();route()});
     wpMarkers.push(m);
   });
 }
@@ -71,6 +71,7 @@ function insertWaypoint(p){
   state.waypoints.splice(best,0,p);
 }
 async function onMapClick(p){
+  if(window.mapaClickTragado&&mapaClickTragado())return; // en celular, ese toque solo cerró la hoja
   if(state.pick){
     const which=state.pick;setPick(null);
     placeEnd(which,p,"…");

@@ -34,7 +34,7 @@ document.querySelector(".modal-fondo").onclick=closeModal;
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("videoModal").hidden)closeModal()});
 $("openBtn").onclick=()=>{openModal();if(!playing)renderAt(0)};
 const fmtDur=ms=>{const s=Math.round(ms/1000);return s<60?s+" s":Math.floor(s/60)+" min"+(s%60?" "+(s%60)+" s":"")};
-["format","step","turns"].forEach(id=>$(id).addEventListener("change",()=>{
+["format","step"].forEach(id=>$(id).addEventListener("change",()=>{
   if(state.frames){invalidateFrames();setMsg($("videoMsg"),"Cambiaste opciones: vuelve a preparar el recorrido.")}
   if(id==="format")sizeCanvas();
   if(id==="step"&&state.path)setMsg($("routeMsg"),"El video usará unas "+(Math.ceil(state.path.length/+$("step").value)+1)+" fotos de Street View.","ok");
@@ -44,7 +44,7 @@ function progress(f){const b=$("bar");b.style.display=f==null?"none":"block";b.f
 $("prepBtn").onclick=async()=>{
   if(preparing){openModal();return} // ya se está preparando: solo volver a mostrar la ventana
   const path=state.path;if(!path)return;
-  const step=+$("step").value, fmt=$("format").value, turns=$("turns").value==="1";
+  const step=+$("step").value, fmt=$("format").value;
   const n=Math.ceil(path.length/step);
   if(n>250&&!confirm("Esta ruta necesita unas "+n+" fotos de Street View, más de lo normal. ¿Seguir?"))return;
   preparing=true;stopPlayback();
@@ -74,10 +74,10 @@ $("prepBtn").onclick=async()=>{
       if(dist(s.pos,look)<5)look=path.at(Math.min(path.length,s.d+35));
       s.heading=(dist(s.pos,look)<3&&i>0)?stops[i-1].heading:bearing(s.pos,look);
     });
-    // 4) Esquinas: girar la cámara sobre la misma panorámica
+    // 4) Esquinas: siempre se gira la cámara sobre la misma panorámica (y sale el aviso de giro)
     const shots=[];
     stops.forEach((s,i)=>{
-      if(i>0&&turns){
+      if(i>0){
         const prev=stops[i-1], delta=angDiff(prev.heading,s.heading);
         if(Math.abs(delta)>38){
           const k=Math.min(3,Math.ceil(Math.abs(delta)/40));
