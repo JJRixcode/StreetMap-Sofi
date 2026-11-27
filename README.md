@@ -62,6 +62,10 @@ python3 -m http.server 8000
 
 y abre `http://localhost:8000`.
 
+## Publicar cambios
+
+En `index.html`, el CSS y los JS llevan un número de versión (`?v=2`). Cada vez que cambies uno de esos archivos, **sube el número en todas las líneas** (`?v=3`, `?v=4`…). Así el navegador baja los archivos nuevos juntos y no mezcla versiones viejas guardadas con las nuevas, que es lo que puede dejar el mapa sin cargar justo después de publicar.
+
 ## Navegadores
 
 - **Chrome, Edge o Safari actualizados** (computador, Android o iPhone): el video sale en MP4.
