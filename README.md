@@ -47,7 +47,7 @@ Una ruta de 1 km usa unas 110 a 130 fotos, así que alcanzan **2 o 3 videos al d
 
 ## Uso
 
-1. Escribe **Desde** y **Hasta** y elige de la lista, o toca **📍 Mapa** y marca el punto.
+1. Escribe **Desde** y **Hasta** y elige de la lista, o toca **Mapa** y marca el punto.
 2. Revisa la ruta. Si quieres otro camino, toca el mapa para agregar puntos.
 3. Elige formato y velocidad, y dale **Preparar recorrido**.
 4. **▶ Ver** para revisarlo y **⬇ Descargar video** para grabarlo. En el celular aparece **Compartir** para mandarlo directo por WhatsApp.

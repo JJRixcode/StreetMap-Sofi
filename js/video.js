@@ -5,10 +5,14 @@ function sizeCanvas(){
   if(!state.frames)drawIdle();
 }
 function drawIdle(){
-  ctx.fillStyle="#111";ctx.fillRect(0,0,cv.width,cv.height);
-  ctx.fillStyle="#9aa3af";ctx.textAlign="center";ctx.textBaseline="middle";
-  ctx.font=`500 ${Math.round(Math.min(cv.width,cv.height)/24)}px system-ui,sans-serif`;
-  ctx.fillText("Aquí aparecerá el recorrido",cv.width/2,cv.height/2);
+  const W=cv.width,H=cv.height,u=Math.min(W,H)/720,cx=W/2,cy=H/2-30*u;
+  ctx.fillStyle="#fff";ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="#e8f0fe";ctx.beginPath();ctx.arc(cx,cy,56*u,0,7);ctx.fill();
+  ctx.fillStyle="#1a73e8";ctx.beginPath();
+  ctx.moveTo(cx-15*u,cy-28*u);ctx.lineTo(cx+26*u,cy);ctx.lineTo(cx-15*u,cy+28*u);ctx.closePath();ctx.fill();
+  ctx.fillStyle="#5f6368";ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.font=`500 ${Math.round(30*u)}px Roboto,system-ui,sans-serif`;
+  ctx.fillText("Aquí aparecerá el recorrido",cx,H/2+70*u);
 }
 let timeline=null;
 const INTRO=1400, OUTRO=2600;

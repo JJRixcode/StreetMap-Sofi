@@ -3,42 +3,59 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#ffffff">
 <title>Ruta a pie en Street View</title>
 <meta name="description" content="Genera un video caminando por Google Street View desde una dirección hasta otra.">
 <link rel="icon" href="iconos/icono.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/estilos.css?v=2">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/estilos.css?v=3">
 </head>
 <body>
 <div class="app">
 <aside>
-  <h1>Ruta a pie en Street View</h1>
-  <p class="sub">Pon dos direcciones, ajusta la ruta y genera un video caminando por Street View.</p>
-
-
-  <div class="card" id="cardDirs">
-    <h2>1 · Direcciones</h2>
-    <label for="from">Desde</label>
-    <div class="row">
-      <input type="text" id="from" placeholder="Ej: Parque Lleras o Cl 10 # 43A-20">
-      <button class="pick" data-pick="from" title="Elegir en el mapa">📍 Mapa</button>
+  <header class="top">
+    <img src="iconos/icono.svg" alt="" width="40" height="40">
+    <div>
+      <h1>Ruta a pie en Street View</h1>
+      <p class="sub">Pon dos direcciones y genera un video caminando.</p>
     </div>
-    <label for="to">Hasta</label>
-    <div class="row">
-      <input type="text" id="to" placeholder="Lugar o dirección de destino">
-      <button class="pick" data-pick="to" title="Elegir en el mapa">📍 Mapa</button>
+  </header>
+
+  <section class="card" id="cardDirs">
+    <h2><span class="num">1</span>Direcciones</h2>
+    <div class="dirs">
+      <div class="field">
+        <span class="dot a" aria-hidden="true">A</span>
+        <label for="from" class="vh">Desde</label>
+        <div class="row">
+          <input type="text" id="from" placeholder="Desde: lugar o dirección" autocomplete="off">
+          <button class="pick" data-pick="from" title="Elegir en el mapa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg><span>Mapa</span></button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="dot b" aria-hidden="true">B</span>
+        <label for="to" class="vh">Hasta</label>
+        <div class="row">
+          <input type="text" id="to" placeholder="Hasta: lugar o dirección" autocomplete="off">
+          <button class="pick" data-pick="to" title="Elegir en el mapa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg><span>Mapa</span></button>
+        </div>
+      </div>
     </div>
-    <p class="hint">Escribe y <b>elige de la lista</b>: un lugar (Unicentro, Estación Poblado…) o una dirección (Cl 10 # 43A-20). Si el punto queda corrido, <b>arrástralo</b> en el mapa o usa <b>📍 Mapa</b>.</p>
+    <p class="hint">Escribe y <b>elige de la lista</b>: un lugar (Unicentro, Estación Poblado…) o una dirección (Cl 10 # 43A-20). Si el punto queda corrido, <b>arrástralo</b> en el mapa o usa el botón <b>Mapa</b>.</p>
     <button class="primary" id="routeBtn">Calcular ruta a pie</button>
     <div class="stats" id="routeStats" hidden>
-      <span><b id="stDist">–</b> recorrido</span>
-      <span><b id="stTime">–</b> caminando</span>
+      <span class="walk" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9 7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7"/></svg></span>
+      <div><b id="stTime">–</b> caminando<small><span id="stDist">–</span> de recorrido</small></div>
     </div>
     <p class="hint" id="routeHint" hidden>¿Tú conoces otro camino? <b>Toca el mapa</b> para agregar un punto por donde pasar. Arrastra los puntos para moverlos y tócalos para quitarlos.</p>
     <div class="msg" id="routeMsg"></div>
-  </div>
+  </section>
 
-  <div class="card" id="cardVideo">
-    <h2>2 · Video</h2>
+  <section class="card" id="cardVideo">
+    <h2><span class="num">2</span>Video</h2>
     <label for="title">Texto en el video</label>
     <input type="text" id="title" placeholder="Nombre del destino">
     <div class="two">
@@ -46,7 +63,7 @@
         <label for="format">Formato</label>
         <select id="format">
           <option value="h">Horizontal 16:9</option>
-          <option value="v">Vertical 9:16 (WhatsApp)</option>
+          <option value="v">Vertical 9:16</option>
         </select>
       </div>
       <div>
@@ -88,7 +105,7 @@
       <button id="shareBtn" hidden>Compartir (WhatsApp, etc.)</button>
     </div>
     <p class="hint">Mientras se graba, deja la página abierta y la pantalla encendida: el video se graba en tiempo real.</p>
-  </div>
+  </section>
 
 </aside>
 
@@ -98,13 +115,13 @@
 </main>
 </div>
 
-<script src="config.js?v=2"></script>
-<script src="js/utilidades.js?v=2" defer></script>
-<script src="js/servicios.js?v=2" defer></script>
-<script src="js/mapa.js?v=2" defer></script>
-<script src="js/sugerencias.js?v=2" defer></script>
-<script src="js/recorrido.js?v=2" defer></script>
-<script src="js/video.js?v=2" defer></script>
-<script src="js/inicio.js?v=2" defer></script>
+<script src="config.js?v=3"></script>
+<script src="js/utilidades.js?v=3" defer></script>
+<script src="js/servicios.js?v=3" defer></script>
+<script src="js/mapa.js?v=3" defer></script>
+<script src="js/sugerencias.js?v=3" defer></script>
+<script src="js/recorrido.js?v=3" defer></script>
+<script src="js/video.js?v=3" defer></script>
+<script src="js/inicio.js?v=3" defer></script>
 </body>
 </html>
