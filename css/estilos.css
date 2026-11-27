@@ -24,6 +24,17 @@ aside{background:var(--panel);box-shadow:var(--shadow-2);position:relative;z-ind
 main{display:grid;min-height:0}
 #map{position:relative;z-index:0;min-height:300px;background:var(--line-soft)}
 
+/* Contenedores: en computador son invisibles (todo va en el panel, en este orden) */
+aside{display:flex;flex-direction:column}
+aside>*,.flotante>*,.hoja>*{flex:none}
+.flotante,.hoja{display:contents}
+.hoja-asa{display:none}
+.top{order:0}#cardDirs{order:1}#routeInfo{order:2}#cardVideo{order:3}
+#cardDirs{padding-bottom:16px}
+#routeInfo{display:flex;flex-direction:column;gap:12px;padding:0 24px 22px;border-top:0}
+#routeInfo>*{margin:0}
+#routeInfo:not(:has(> :not([hidden], .msg:empty))){display:none}
+
 /* Encabezado */
 .top{display:flex;align-items:center;gap:14px;padding:18px 24px 16px}
 .top img{flex:none;width:auto;height:96px;filter:drop-shadow(0 2px 4px rgba(60,64,67,.25))}
@@ -44,16 +55,6 @@ h1 span{color:var(--accent)}
 .field{display:flex;align-items:center;gap:12px}
 .field .row{flex:1;min-width:0}
 .capi{position:relative;z-index:1;flex:none;width:40px;height:35px;filter:drop-shadow(0 1px 1px rgba(60,64,67,.3))}
-
-/* Usar mi ubicación */
-button.locate{height:36px;margin:10px 0 0 44px;padding:0 12px 0 8px;border-color:transparent;background:none;
-  color:var(--accent);font-size:13.5px;border-radius:999px;white-space:nowrap}
-button.locate svg{width:18px;height:18px;fill:currentColor;flex:none}
-button.locate:hover:not(:disabled){background:var(--accent-soft);border-color:transparent}
-button.locate:disabled{background:none;border-color:transparent;color:var(--muted);cursor:wait}
-button.locate:disabled svg{animation:girar 1.2s linear infinite}
-@keyframes girar{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){button.locate:disabled svg{animation:none}}
 
 /* Campos */
 label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin:14px 0 6px}
@@ -105,10 +106,17 @@ a{color:var(--accent)}
 .bar{display:none;height:4px;margin-top:14px;border-radius:2px;background:var(--accent-soft);overflow:hidden}
 .bar i{display:block;width:0;height:100%;background:var(--accent);transition:width .2s}
 .dl{display:none;margin-top:12px}
-.dl a{display:flex;align-items:center;justify-content:center;height:44px;padding:0 16px;border-radius:999px;
-  background:var(--green);color:#fff;font-weight:500;text-decoration:none;transition:background-color .15s}
-.dl a:hover{background:var(--green-dark)}
-.dl button{width:100%;margin-top:8px}
+/* Compartir por WhatsApp: el botón grande. Guardar: más pequeño, debajo */
+.dl .compartir{width:100%;height:56px;gap:10px;font-size:17px;font-weight:700;color:#fff;background:var(--green);border-color:var(--green)}
+.dl .compartir:hover:not(:disabled){background:var(--green-dark);border-color:var(--green-dark);box-shadow:var(--shadow-1)}
+.dl .compartir svg{width:24px;height:24px;fill:currentColor}
+.dl a{display:flex;align-items:center;justify-content:center;height:40px;margin-top:10px;padding:0 16px;border-radius:999px;
+  border:1px solid var(--line);background:#fff;color:var(--accent);font-size:14px;font-weight:500;text-decoration:none;
+  transition:background-color .15s}
+.dl a:hover{background:#f6faff}
+/* Si el navegador no puede compartir, Guardar queda como botón principal */
+.dl.sin-compartir a{height:48px;margin-top:0;border-color:var(--green);background:var(--green);color:#fff;font-size:15px}
+.dl.sin-compartir a:hover{background:var(--green-dark)}
 
 /* Sugerencias de lugares */
 .sugg{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:2000;margin:0;padding:6px 0;list-style:none;
@@ -126,25 +134,70 @@ a{color:var(--accent)}
 .sugg li.empty::before{display:none}
 .sugg li.empty:hover{background:none}
 
-/* ---------- Celular: tarjetas blancas sobre fondo gris ---------- */
+/* ---------- Celular: mapa a pantalla completa, direcciones flotando arriba y hoja abajo (como Google Maps) ---------- */
 @media (max-width:860px){
-  /* Orden: encabezado → direcciones → mapa → opciones de video */
-  .app{display:flex;flex-direction:column;height:auto;min-height:100vh;padding:0 0 calc(24px + env(safe-area-inset-bottom))}
-  aside,main{display:contents}
-  .top{order:1;padding:calc(18px + env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 14px max(20px,env(safe-area-inset-left))}
-  .top img{height:84px}
-  #cardDirs{order:2}#map{order:3}#cardVideo{order:4}
-  .card,#map{margin:0 max(12px,env(safe-area-inset-right)) 12px max(12px,env(safe-area-inset-left))}
-  .card{border:0;border-radius:16px;background:var(--panel);box-shadow:var(--shadow-1);padding:16px 16px 18px}
-  #cardVideo{padding-bottom:18px}
-  #map{height:56vh;min-height:300px;max-height:520px;border-radius:16px;overflow:hidden;box-shadow:var(--shadow-1)}
+  html,body{height:100%;overflow:hidden}
+  body{background:#ebe9e5}
+  .app{display:block;height:100vh;height:100dvh;padding:0}
+  aside{display:contents}
+  /* El mapa llega hasta la hoja plegada, así el logo de Google queda a la vista.
+     (Google le pone position:relative al #map, por eso lo fijo es su contenedor) */
+  main{display:block;position:fixed;top:0;left:0;right:0;bottom:var(--hoja-plegada,150px);z-index:0}
+  #map{height:100%;min-height:0;border-radius:0}
+
+  /* Tarjeta flotante con A y B */
+  .flotante{display:block;position:fixed;z-index:30;top:calc(10px + env(safe-area-inset-top));
+    left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right))}
+  #cardDirs{padding:4px 6px 4px 10px;border:0;border-radius:20px;background:#fff;
+    box-shadow:0 1px 3px rgba(60,64,67,.3),0 4px 12px 2px rgba(60,64,67,.15)}
+  #cardDirs h2,#cardDirs .hint,#routeBtn{display:none} /* la ruta se calcula sola; «Ir» del teclado también sirve */
+  .dirs{gap:0}
+  .dirs::before{left:16px;top:38px;bottom:38px}
+  .capi{width:34px;height:30px}
+  .field{gap:8px}
+  .field+.field .row{border-top:1px solid var(--line-soft)}
   /* 16px evita que el iPhone haga zoom al tocar un campo */
+  .flotante input[type=text]{height:48px;padding:0 8px;font-size:16px;border:0;border-radius:10px;background:transparent}
+  .flotante input[type=text]:focus{background:var(--bg);box-shadow:none}
+  .flotante button.pick{width:40px;height:40px;padding:0;border:0;border-radius:50%;background:transparent}
+  .flotante button.pick span{display:none}
+  .flotante button.pick svg{width:22px;height:22px}
+  .flotante button.pick:hover:not(:disabled){background:var(--bg);border:0}
+  .flotante button.pick.on{background:var(--accent-soft)}
+
+  /* Hoja inferior: plegada muestra lo importante; se sube para ver las opciones */
+  .hoja{display:flex;flex-direction:column;gap:12px;position:fixed;z-index:20;left:0;right:0;bottom:0;
+    height:var(--hoja-plegada,150px);overflow:hidden;
+    padding:0 max(16px,env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+    background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -1px 3px rgba(60,64,67,.15),0 -4px 14px rgba(60,64,67,.12);
+    transition:height .28s cubic-bezier(.2,.8,.2,1)}
+  .hoja.abierta{overflow-y:auto;overscroll-behavior:contain}
+  .hoja-asa{display:flex;align-items:center;justify-content:center;height:22px;margin:0 -16px -6px;padding:0;
+    border:0;border-radius:0;background:transparent;cursor:grab;touch-action:none}
+  .hoja-asa:hover:not(:disabled){background:transparent;border:0}
+  .hoja-asa span{width:36px;height:4px;border-radius:2px;background:#dadce0}
+  .hoja .top{padding:0;gap:12px;cursor:pointer;touch-action:none}
+  .hoja .top img{height:52px}
+  .hoja .top h1{font-size:19px}
+  .hoja .top .sub{display:none}
+  #routeInfo,#cardVideo{display:contents}
+  .hoja>*,#routeInfo>*,#cardVideo>*{margin:0;flex:none}
+  /* Orden en la hoja */
+  .hoja-asa{order:0}
+  .hoja .top{order:1}
+  #routeStats{order:2}
+  #routeMsg{order:3}
+  #prepBtn,#openBtn{order:4}
+  #videoMsg{order:5}
+  #cardVideo>h2{order:6;margin-top:8px}
+  #cardVideo>label,#cardVideo>input,#cardVideo>.two{order:7}
+  #cardVideo>label{margin-bottom:-6px}
+  .hoja .two label{margin-top:0}
+  #routeHint{order:8}
   input[type=text],select{height:48px;font-size:16px}
   select{padding:0 30px 0 12px;background-position:right 4px center}
   button{height:46px}
-  button.primary,button.pick{height:48px}
-  button.locate{height:40px}
-  .dirs::before{top:42px;bottom:42px}
+  button.primary{height:48px}
   .sugg li{min-height:52px}
   .sugg li b{font-size:15px}
 }

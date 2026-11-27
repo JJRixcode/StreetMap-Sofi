@@ -6,7 +6,8 @@ function loadMap(){
     window.__svInit=()=>{
       gm=google.maps;
       map=new gm.Map($("map"),{center:{lat:CIUDAD.centro[0],lng:CIUDAD.centro[1]},zoom:CIUDAD.zoom,clickableIcons:false,
-        streetViewControl:false,mapTypeControl:false,fullscreenControl:false,gestureHandling:isPhone()?"cooperative":"greedy"});
+        streetViewControl:false,mapTypeControl:false,fullscreenControl:false,gestureHandling:"greedy",
+        zoomControl:!isPhone(),cameraControl:!isPhone()}); // en celular el mapa ocupa toda la pantalla: se mueve con los dedos
       map.addListener("click",e=>onMapClick([e.latLng.lat(),e.latLng.lng()]));
       resolve();
     };
@@ -20,8 +21,10 @@ function loadMap(){
   return mapLoading;
 }
 const LL=p=>({lat:p[0],lng:p[1]});
-function focusMap(pos){if(map){map.panTo(LL(pos));if(map.getZoom()<16)map.setZoom(16)}}
-function fitRoute(b){if(map&&b&&b!==true)map.fitBounds(b,30)}
+/* En celular, la tarjeta de direcciones tapa la parte de arriba del mapa: se deja ese espacio libre */
+const tapaArriba=()=>isPhone()?Math.round(document.querySelector(".flotante").getBoundingClientRect().bottom):0;
+function focusMap(pos){if(map){map.panTo(LL(pos));if(map.getZoom()<16)map.setZoom(16);const t=tapaArriba();if(t)map.panBy(0,-t/2)}}
+function fitRoute(b){if(!map||!b||b===true)return;const t=tapaArriba();map.fitBounds(b,t?{top:t+16,bottom:24,left:24,right:24}:30)}
 /* Capibara pequeña con la letra A o B; el punto exacto queda en el centro del cuerpo */
 function endIcon(which){return {url:"iconos/capi-"+(which==="from"?"a":"b")+".svg?v=2",scaledSize:new gm.Size(42,37),anchor:new gm.Point(18,22)}}
 const wpIcon=()=>({path:gm.SymbolPath.CIRCLE,scale:7,fillColor:"#fff",fillOpacity:1,strokeColor:"#1a73e8",strokeWeight:4});
@@ -86,7 +89,7 @@ function setPick(which){
   if(map)map.setOptions({draggableCursor:which?"crosshair":null});
   if(which){
     setMsg($("routeMsg"),"Toca el mapa en el punto de "+(which==="from"?"salida":"llegada")+".");
-    if(isPhone())$("map").scrollIntoView({behavior:"smooth",block:"start"});
+    if(isPhone()&&window.plegarHoja)plegarHoja();
   }
 }
 document.querySelectorAll(".pick").forEach(b=>b.onclick=()=>setPick(state.pick===b.dataset.pick?null:b.dataset.pick));
@@ -135,40 +138,7 @@ $("routeBtn").onclick=async()=>{
     state.waypoints=[];drawWaypoints();
     const b=await route();
     fitRoute(b);
-    if(b&&isPhone())$("map").scrollIntoView({behavior:"smooth",block:"start"});
   }catch(e){setMsg($("routeMsg"),explain(e),"err")}
-};
-/* Usar mi ubicación como punto de partida (A) */
-$("myLocBtn").onclick=()=>{
-  const btn=$("myLocBtn");
-  if(!navigator.geolocation){setMsg($("routeMsg"),"Este navegador no puede darte tu ubicación. Marca el punto con el botón Mapa.","err");return}
-  btn.disabled=true;setPick(null);
-  setMsg($("routeMsg"),"Buscando tu ubicación…");
-  navigator.geolocation.getCurrentPosition(async p=>{
-    try{
-      await loadMap();
-      const pos=[p.coords.latitude,p.coords.longitude], acc=Math.round(p.coords.accuracy||0);
-      placeEnd("from",pos,"Tu ubicación");
-      $("from").value="Buscando dirección…";
-      const name=await reverseGeocode(pos);
-      state.from.name=name;$("from").value=name;
-      const aviso=acc>100?" Tu ubicación es aproximada (unos "+acc+" m): si la capibara A quedó corrida, arrástrala.":"";
-      if(state.to){
-        const b=await route();fitRoute(b);
-        if(aviso&&b)setMsg($("routeMsg"),$("routeMsg").textContent+aviso,"ok");
-      }else{
-        focusMap(pos);
-        setMsg($("routeMsg"),"Listo, sales desde tu ubicación. Ahora escribe a dónde vas."+aviso,"ok");
-        $("to").focus();
-      }
-    }catch(e){setMsg($("routeMsg"),explain(e),"err")}
-    finally{btn.disabled=false}
-  },e=>{
-    btn.disabled=false;
-    setMsg($("routeMsg"),e.code===1
-      ?"No diste permiso para usar tu ubicación. Actívalo en el navegador (el candado junto a la dirección de la página) e intenta otra vez."
-      :"No pude encontrar tu ubicación. Intenta otra vez o marca el punto con el botón Mapa.","err");
-  },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
 };
 ["from","to"].forEach(id=>$(id).addEventListener("keydown",e=>{
   if(e.key!=="Enter")return;

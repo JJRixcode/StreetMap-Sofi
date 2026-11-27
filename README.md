@@ -47,12 +47,12 @@ Con fotos cada 14 m (lo normal), una ruta de 1 km usa unas 75 a 90 fotos, así q
 
 ## Uso
 
-1. Escribe **Desde** y **Hasta** y elige de la lista, o toca **Mapa** y marca el punto. Para salir desde donde estás, toca **Salir desde mi ubicación** (el navegador pide permiso la primera vez).
+1. Escribe **Desde** y **Hasta** y elige de la lista, o toca **Mapa** y marca el punto. En el celular, el mapa ocupa toda la pantalla: las direcciones flotan arriba y abajo hay una hoja que se sube (desliza o toca la manija) para ver las opciones del video.
 2. Revisa la ruta. Si quieres otro camino, toca el mapa para agregar puntos.
 3. Elige formato y velocidad, y dale **Preparar recorrido**. Se abre una ventana con el bebé bailando mientras baja las fotos (puedes cerrarla: sigue preparándose).
 4. Cuando está listo aparece el gato con el video: **▶ Ver** para revisarlo y **⬇ Descargar video** para grabarlo. En el celular aparece **Compartir** para mandarlo directo por WhatsApp. Si cierras la ventana, el botón **▶ Ver video** del panel la vuelve a abrir.
 
-Mientras graba, deja la ventana abierta (no se puede cerrar hasta que termine): el video se graba en tiempo real.
+Al descargar, el video se crea en unos segundos, sin tener que reproducirlo entero (WebCodecs + [mp4-muxer](https://github.com/Vanilagy/mp4-muxer), que se carga solo al descargar). En navegadores viejos que no tienen WebCodecs se graba en tiempo real como antes. Mientras se crea, la ventana no se puede cerrar.
 
 ## Probarla en tu computador
 
@@ -68,8 +68,8 @@ En `index.html`, el CSS y los JS llevan un número de versión (`?v=2`). Cada ve
 
 ## Navegadores
 
-- **Chrome, Edge o Safari actualizados** (computador, Android o iPhone): el video sale en MP4.
-- **Firefox**: el video sale en WebM. Funciona, pero WhatsApp a veces no lo acepta.
+- **Chrome, Edge o Safari actualizados** (computador, Android o iPhone): el video sale en MP4 en unos segundos.
+- **Firefox**: si puede crear H.264 sale igual en MP4; si no, se graba en tiempo real y sale en WebM (WhatsApp a veces no lo acepta).
 
 ## Archivos
 
@@ -81,6 +81,7 @@ js/utilidades.js    Cálculos de distancias y rumbos
 js/servicios.js     Google: sugerencias, ruta a pie y Street View
 js/mapa.js          Mapa, puntos y ruta
 js/sugerencias.js   Lista de sugerencias mientras escribes
+js/hoja.js          Hoja inferior del celular (se sube y se baja)
 js/recorrido.js     Busca y baja las fotos de Street View
 js/video.js         Dibuja, reproduce y graba el video
 js/inicio.js        Arranque de la app

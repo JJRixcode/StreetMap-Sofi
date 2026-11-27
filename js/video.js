@@ -146,43 +146,116 @@ function pickMime(){
   const c=["video/mp4;codecs=avc1.640028","video/mp4;codecs=avc1.42E01E","video/mp4","video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"];
   return c.find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m))||"";
 }
-$("recBtn").onclick=()=>{
-  if(!window.MediaRecorder||!cv.captureStream){setMsg($("prepMsg"),"Este navegador no puede grabar video. Usa Chrome, Edge o Safari actualizados.","err");return}
+/* ---------- Descargar el video ----------
+   Forma rápida: se dibuja cada cuadro y el navegador lo convierte a MP4 (WebCodecs + mp4-muxer),
+   sin esperar a que se reproduzca. Si el navegador no puede, se graba en tiempo real como antes. */
+const FPS=30, MUXER_URL="https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.1/build/mp4-muxer.min.js";
+let exporting=false, muxerLoading=null;
+function loadMuxer(){
+  if(window.Mp4Muxer)return Promise.resolve();
+  if(!muxerLoading)muxerLoading=new Promise((ok,ko)=>{
+    const sc=document.createElement("script");sc.src=MUXER_URL;sc.async=true;
+    sc.onload=ok;sc.onerror=()=>{muxerLoading=null;ko(new Error("No se pudo cargar el creador de MP4"))};
+    document.head.appendChild(sc);
+  });
+  return muxerLoading;
+}
+async function avcConfig(W,H){
+  if(!window.VideoEncoder||!window.VideoFrame)return null;
+  // H.264 High, Main y Baseline: el primero que el navegador acepte
+  for(const codec of ["avc1.640028","avc1.4d0028","avc1.42002a","avc1.42001f"]){
+    const cfg={codec,width:W,height:H,bitrate:6e6,framerate:FPS,avc:{format:"avc"}};
+    try{const r=await VideoEncoder.isConfigSupported(cfg);if(r.supported)return r.config||cfg}catch(e){}
+  }
+  return null;
+}
+/* Ceder el turno al navegador sin el retraso mínimo de setTimeout */
+const canalCeder=new MessageChannel(), cola=[];
+canalCeder.port1.onmessage=()=>{const r=cola.shift();r&&r()};
+const ceder=()=>new Promise(r=>{cola.push(r);canalCeder.port2.postMessage(0)});
+async function exportFast(onProgress){
+  const W=cv.width,H=cv.height;
+  const config=await avcConfig(W,H);if(!config)return null;
+  await loadMuxer();
+  const {Muxer,ArrayBufferTarget}=window.Mp4Muxer;
+  const muxer=new Muxer({target:new ArrayBufferTarget(),video:{codec:"avc",width:W,height:H,frameRate:FPS},fastStart:"in-memory"});
+  let fallo=null;
+  const enc=new VideoEncoder({output:(chunk,meta)=>muxer.addVideoChunk(chunk,meta),error:e=>{fallo=e}});
+  enc.configure(config);
+  const n=Math.ceil(timeline.total/1000*FPS)+1, dt=1e6/FPS;
+  for(let i=0;i<n;i++){
+    if(fallo)throw fallo;
+    renderAt(i*1000/FPS);
+    const frame=new VideoFrame(cv,{timestamp:Math.round(i*dt),duration:Math.round(dt)});
+    enc.encode(frame,{keyFrame:i%(FPS*2)===0});
+    frame.close();
+    // no llenar la memoria: si hay muchos cuadros en espera, esperar a que el codificador avance
+    while(enc.encodeQueueSize>12)await("ondequeue" in enc?new Promise(r=>enc.addEventListener("dequeue",r,{once:true})):ceder());
+    if(i%15===0){onProgress(i/n);await ceder()}
+  }
+  await enc.flush();if(fallo)throw fallo;enc.close();
+  muxer.finalize();
+  return new Blob([muxer.target.buffer],{type:"video/mp4"});
+}
+function entregarVideo(blob,type){
+  const ext=type.includes("mp4")?"mp4":"webm";
+  const name="como-llegar-"+(state.frames.title||"destino").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40)+"."+ext;
+  const a=$("dlLink");
+  if(a.href.startsWith("blob:"))URL.revokeObjectURL(a.href);
+  a.href=URL.createObjectURL(blob);a.download=name;
+  a.textContent="Guardar video ("+(blob.size/1048576).toFixed(1)+" MB, "+ext.toUpperCase()+")";
+  $("dl").style.display="block";
+  lastVideo=new File([blob],name,{type:type.split(";")[0]});
+  const canShare=!!(navigator.canShare&&navigator.canShare({files:[lastVideo]}));
+  $("shareBtn").hidden=!canShare;$("dl").classList.toggle("sin-compartir",!canShare);
+  releaseWake();
+  // En celular se ofrece Compartir/Guardar; en computador se descarga solo.
+  if(!isPhone())a.click();
+  $("dl").scrollIntoView({behavior:"smooth",block:"nearest"});
+  setMsg($("prepMsg"),"Video listo."+(ext==="webm"?" Salió en WebM: WhatsApp a veces no lo acepta; desde Chrome o Safari actualizados sale en MP4.":""),"ok");
+  $("recBtn").disabled=$("playBtn").disabled=$("modalClose").disabled=false;
+  $("recBtn").textContent="⬇ Descargar video";
+  renderAt(0);
+}
+$("recBtn").onclick=async()=>{
+  stopPlayback();
+  $("recBtn").disabled=$("playBtn").disabled=$("modalClose").disabled=true;
+  $("dl").style.display="none";
+  $("recBtn").textContent="⏳ Creando video…";
+  setMsg($("prepMsg"),"Creando el video…");
+  exporting=true;holdWake();
+  let blob=null;
+  try{
+    progress(0);
+    blob=await exportFast(f=>{progress(f);setMsg($("prepMsg"),"Creando el video… "+Math.round(f*100)+" %")});
+  }catch(e){console.warn("Exportación rápida falló, se graba en tiempo real:",e);blob=null}
+  exporting=false;progress(null);
+  if(blob){entregarVideo(blob,"video/mp4");return}
+  grabarEnTiempoReal();
+};
+/* Plan B: grabar la reproducción en tiempo real (navegadores sin WebCodecs) */
+function pickMime(){
+  const c=["video/mp4;codecs=avc1.640028","video/mp4;codecs=avc1.42E01E","video/mp4","video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"];
+  return c.find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m))||"";
+}
+function grabarEnTiempoReal(){
+  if(!window.MediaRecorder||!cv.captureStream){
+    setMsg($("prepMsg"),"Este navegador no puede crear el video. Usa Chrome, Edge o Safari actualizados.","err");
+    $("recBtn").disabled=$("playBtn").disabled=$("modalClose").disabled=false;$("recBtn").textContent="⬇ Descargar video";releaseWake();return;
+  }
   const mime=pickMime();
-  const stream=cv.captureStream(30);
+  const stream=cv.captureStream(FPS);
   recorder=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:8e6}:{videoBitsPerSecond:8e6});
   const chunks=[];
   recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
-  recorder.onstop=()=>{
-    const type=recorder.mimeType||mime||"video/webm";
-    const blob=new Blob(chunks,{type});
-    const ext=type.includes("mp4")?"mp4":"webm";
-    const name="como-llegar-"+(state.frames.title||"destino").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40)+"."+ext;
-    const a=$("dlLink");
-    if(a.href.startsWith("blob:"))URL.revokeObjectURL(a.href);
-    a.href=URL.createObjectURL(blob);a.download=name;
-    a.textContent="Guardar video ("+(blob.size/1048576).toFixed(1)+" MB, "+ext.toUpperCase()+")";
-    $("dl").style.display="block";
-    lastVideo=new File([blob],name,{type:type.split(";")[0]});
-    const canShare=!!(navigator.canShare&&navigator.canShare({files:[lastVideo]}));
-    $("shareBtn").hidden=!canShare;
-    releaseWake();
-    // En celular se ofrece Compartir/Guardar; en computador se descarga solo.
-    if(!isPhone())a.click();
-    $("dl").scrollIntoView({behavior:"smooth",block:"nearest"});
-    setMsg($("prepMsg"),"Video listo."+(ext==="webm"?" Salió en WebM: WhatsApp a veces no lo acepta; desde Chrome o Safari actualizados sale en MP4.":""),"ok");
-    $("recBtn").disabled=$("playBtn").disabled=$("modalClose").disabled=false;
-    $("recBtn").textContent="⬇ Descargar video";
-  };
-  $("recBtn").disabled=$("playBtn").disabled=$("modalClose").disabled=true;
+  recorder.onstop=()=>{const type=recorder.mimeType||mime||"video/webm";entregarVideo(new Blob(chunks,{type}),type)};
   $("recBtn").textContent="● Grabando…";
-  $("dl").style.display="none";
   setMsg($("prepMsg"),"Grabando ("+fmtDur(timeline.total)+"). No cierres esta ventana ni cambies de pestaña.");
   renderAt(0);
   holdWake();
   recorder.start(1000);
   play(()=>setTimeout(()=>recorder.state!=="inactive"&&recorder.stop(),150));
-};
+}
 
 /* ---------- Compartir y pantalla encendida ---------- */
 let lastVideo=null, wake=null;

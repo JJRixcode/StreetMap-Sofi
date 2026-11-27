@@ -24,7 +24,7 @@ function openModal(){
   $("modalClose").focus();
 }
 function closeModal(){
-  if(recorder&&recorder.state==="recording")return; // no cerrar mientras graba
+  if(exporting||(recorder&&recorder.state==="recording"))return; // no cerrar mientras crea el video
   stopPlayback();
   $("videoModal").hidden=true;document.body.classList.remove("modal-abierto");
   if(focoAntes&&focoAntes.focus)focoAntes.focus();
