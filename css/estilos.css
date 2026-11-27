@@ -13,10 +13,6 @@ body{background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-syst
 aside{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:18px 18px 40px}
 main{display:grid;grid-template-rows:minmax(260px,42%) 1fr;min-height:0}
 #map{min-height:260px;background:var(--soft);position:relative}
-.leaflet-container{font:inherit}
-#map.picking,#map.picking .leaflet-interactive{cursor:crosshair}
-.pin span{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;border:3px solid #fff;color:#fff;font:700 12px system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.4)}
-.wp span{display:block;width:18px;height:18px;border-radius:50%;background:#fff;border:4px solid #1a73e8;box-shadow:0 1px 3px rgba(0,0,0,.35)}
 .stage{display:flex;align-items:center;justify-content:center;padding:14px;min-height:0;background:#0b0d10}
 #player{max-width:100%;max-height:100%;background:#000;border-radius:8px;display:block}
 h1{font-size:20px;margin:0 0 4px}

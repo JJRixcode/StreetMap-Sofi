@@ -32,16 +32,19 @@ function setupSuggest(which){
     input.setAttribute("aria-expanded",list.hidden?"false":"true");
     active=-1;
   }
-  function choose(i){
-    const it=items[i];if(!it)return;
+  async function choose(i){
+    let it=items[i];if(!it)return;
     close();
     input.value=it.name;
+    try{it=await placeLocation(it);await loadMap()}
+    catch(e){setMsg($("routeMsg"),explain(e),"err");return}
+    if(input.value!==it.name)return; // escribió otra cosa mientras tanto
     placeEnd(which,it.pos,it.name);
     if(which==="to")$("title").value=shortName(it.name);
-    if(map)map.setView(LL(it.pos),Math.max(map.getZoom(),16));
+    focusMap(it.pos);
     if(state.from&&state.to){
       state.waypoints=[];drawWaypoints();
-      route().then(b=>{if(b&&b!==true)map.fitBounds(b,{padding:[30,30]})});
+      route().then(fitRoute);
     }else{
       setMsg($("routeMsg"),which==="from"?"Ahora escribe a dónde vas.":"Ahora escribe de dónde sales.");
       $(which==="from"?"to":"from").focus();
@@ -59,8 +62,8 @@ function setupSuggest(which){
         const r=await suggest(q);
         if(my!==seq||input.value.trim()!==q)return;
         items=r;render(r.length?"":"Sin resultados. Prueba con otro nombre o marca el punto en el mapa.");
-      }catch(e){if(my===seq){items=[];render("No se pudo buscar. Revisa tu conexión.")}}
-    },250);
+      }catch(e){if(my===seq){items=[];render(explain(e))}}
+    },350); // esperar a que termine de escribir: cada consulta cuenta para el cupo gratis
   });
   input.addEventListener("keydown",e=>{
     if(list.hidden||!items.length)return;

@@ -1,20 +1,16 @@
 // Configuración.
 //
-// mapillaryToken: el "Client Token" de tu app en Mapillary (empieza por "MLY|").
-// Es un token de solo lectura pensado para usarse en páginas web, así que se
-// puede dejar aquí aunque el repositorio sea público. Si lo dejas vacío, la app
-// le pide el token a cada persona (y lo guarda solo en su navegador).
+// googleKey: clave de Google Maps Platform. Queda pública en esta página, por eso
+// en Google Cloud está restringida a https://jjrixcode.github.io/* (y localhost
+// para pruebas), solo a las 5 APIs que usa la app y con límites diarios.
 //
 // ciudad: zona donde se buscan primero las direcciones y donde arranca el mapa.
 window.CONFIG = {
-  mapillaryToken: "MLY|30956476237275208|e10df6dac29c77dfe3e4ef2fd5303a0a",
-  // tomtomKey (opcional): clave gratis de developer.tomtom.com para mejores direcciones.
-  tomtomKey: "",
+  googleKey: "AIzaSyDvEwLVUBoHsp4ddu4Fh17ZFcbY67TATrA",
   ciudad: {
     nombre: "Medellín",
     centro: [6.2442, -75.5812],
     zoom: 13,
-    // oeste, norte, este, sur (Valle de Aburrá)
-    caja: [-75.72, 6.45, -75.33, 5.98]
+    radio: 30000 // metros alrededor del centro para sugerir lugares
   }
 };

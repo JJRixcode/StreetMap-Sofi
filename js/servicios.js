@@ -1,199 +1,108 @@
-/* ---------- Servicios gratis: OpenStreetMap (búsqueda y rutas) y Mapillary (fotos) ---------- */
+/* ---------- Servicios de Google: búsqueda, ruta a pie y Street View ---------- */
 const CFG = window.CONFIG || {};
-const CIUDAD = CFG.ciudad || {nombre:"Medellín",centro:[6.2442,-75.5812],zoom:13,caja:[-75.72,6.45,-75.33,5.98]};
-const CONFIG_KEY = (CFG.mapillaryToken || "").trim();
-const key = () => CONFIG_KEY || $("apiKey").value.trim();
-function needKey(){
-  if(!key()){setMsg($("keyMsg"),"Primero pega tu token de Mapillary.","err");$("apiKey").focus();throw new Error("sin token")}
-}
+const CIUDAD = CFG.ciudad || {nombre:"Medellín",centro:[6.2442,-75.5812],zoom:13,radio:30000};
+const key = () => (CFG.googleKey||"").trim();
 function explain(err){
   const m=String(err&&err.message||err);
-  if(/OAuth|invalid.*token|token.*invalid|Invalid OAuth|code 190|401/i.test(m))return "Mapillary rechazó el token. Revisa que copiaste el «Client Token» completo (empieza por MLY|).";
-  if(/Failed to fetch|NetworkError|Load failed/i.test(m))return "No hubo conexión con el servicio. Revisa tu internet e intenta otra vez.";
-  if(/429|Too Many/i.test(m))return "El servicio está recibiendo muchas consultas. Espera un minuto e intenta otra vez.";
+  if(/RefererNotAllowed|referer|API_KEY_HTTP_REFERRER_BLOCKED/i.test(m))return "Google rechazó la clave desde esta dirección. La clave solo funciona en la página publicada.";
+  if(/quota|RESOURCE_EXHAUSTED|OVER_QUERY_LIMIT|429/i.test(m))return "Se llegó al límite diario gratis de Google. Vuelve a intentar mañana.";
+  if(/not authorized to use this API|REQUEST_DENIED|PERMISSION_DENIED|SERVICE_DISABLED/i.test(m))return "Google rechazó la clave para esta función.\n\nDetalle: "+m;
+  if(/API key not valid|API_KEY_INVALID/i.test(m))return "La clave de Google no es válida.";
+  if(/Failed to fetch|NetworkError|Load failed/i.test(m))return "No hubo conexión. Revisa tu internet e intenta otra vez.";
   return m;
 }
 
-/* Nominatim pide máximo 1 consulta por segundo: se ponen en fila. */
-let nomQueue=Promise.resolve(), nomLast=0;
-function nominatim(path,params){
-  const run=async()=>{
-    const wait=nomLast+1100-Date.now();if(wait>0)await sleep(wait);
-    nomLast=Date.now();
-    const res=await fetch("https://nominatim.openstreetmap.org/"+path+"?"+new URLSearchParams({format:"jsonv2","accept-language":"es",...params}));
-    if(!res.ok)throw new Error("Error "+res.status+" buscando la dirección");
-    return res.json();
-  };
-  const p=nomQueue.then(run,run);nomQueue=p.catch(()=>{});
-  return p;
-}
-/* ---------- Buscar lugares y direcciones ----------
-   suggest(q) devuelve varias opciones [{pos,name,detail}] para la lista de sugerencias.
-   Si config.js tiene tomtomKey se usa TomTom (mejores direcciones en Colombia);
-   si no, Photon (OpenStreetMap). */
+/* ---------- Sugerencias: Places API (New) ---------- */
+let placesSession=null;
+const newSession=()=>placesSession=(crypto.randomUUID?crypto.randomUUID():String(Math.random()).slice(2));
 const sugCache=new Map();
-const VIAS={calle:"Calle",cl:"Calle",cll:"Calle",clle:"Calle",carrera:"Carrera",cra:"Carrera",cr:"Carrera",kr:"Carrera",kra:"Carrera",crr:"Carrera",
-  avenida:"Avenida",av:"Avenida",avda:"Avenida",circular:"Circular",cq:"Circular",cir:"Circular",transversal:"Transversal",tv:"Transversal",tr:"Transversal",
-  diagonal:"Diagonal",dg:"Diagonal"};
-const normTxt=s=>(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
-/* "Cra 70 #44-20" → {via:"Carrera 70", texto:"Carrera 70 44-20"} */
-function parseDireccion(q){
-  const m=q.trim().match(/^([a-záéíóú]+)\.?\s*(\d+\s*[a-z]?(?:\s*bis)?(?:\s*sur)?)\s*(?:#|n[°º]|no\.?|numero|número)?\s*(\d+\s*[a-z]?(?:\s*bis)?)\s*-\s*(\d+)\s*(sur)?\b(.*)$/i);
-  if(!m)return null;
-  const tipo=VIAS[normTxt(m[1])];if(!tipo)return null;
-  const via=tipo+" "+m[2].replace(/\s+/g,"").toUpperCase().replace("BIS"," Bis").replace("SUR"," Sur");
-  const cruce=m[3].replace(/\s+/g,"").toUpperCase();
-  return {via,cruce,texto:via+" "+cruce+"-"+m[4]+(m[5]?" Sur":"")+(m[6]||"")};
-}
-async function suggest(q,limit=6){
-  q=q.trim();if(q.length<3)return [];
-  const k=q+"|"+limit;if(sugCache.has(k))return sugCache.get(k);
-  const dir=parseDireccion(q);
-  let out=[];
-  if(CFG.tomtomKey){try{out=await tomtom(dir?dir.texto:q,limit)}catch(e){out=[]}}
-  if(!out.length){
-    out=await photonSearch(dir?dir.texto:q.replace(/\s*(#|n[°º]|no\.)\s*/gi," "),limit);
-    if(dir){
-      // primero las que quedan sobre la misma vía y cerca de la calle que cruza
-      const v=normTxt(dir.via), c=normTxt(dir.cruce);
-      const score=r=>{
-        const hn=normTxt(r.housenumber).replace(/[#\s]/g,""), nm=normTxt(r.name);
-        let s=normTxt(r.street)===v?0:3;
-        s+=(hn===c||hn.startsWith(c+"-"))?0:hn.startsWith(c)?0.5:1.5;   // 44-20 mejor que 44B-13
-        // "Calle 44 x Carrera 70" = la esquina: el nombre trae la vía y la calle que cruza
-        if(nm.includes(v)&&new RegExp("(calle|carrera|avenida|circular|transversal|diagonal) "+c+"\\b").test(nm.replace(v,"")))s-=2;
-        return s;
-      };
-      out.sort((a,b)=>score(a)-score(b));
-    }
-  }
-  sugCache.set(k,out);
+/* "Cra 70 # 44-20" → "Carrera 70 # 44-20": Google confunde las abreviaturas (lee "Cra" como "Calle"). */
+const VIAS=[[/^(cra|crr|cr|kra|kr|k)\.?\s*(?=\d)/i,"Carrera "],[/^(cll|clle|cl)\.?\s*(?=\d)/i,"Calle "],[/^(av|avda)\.?\s*(?=\d)/i,"Avenida "],
+  [/^(dg|diag)\.?\s*(?=\d)/i,"Diagonal "],[/^(tv|tr|transv)\.?\s*(?=\d)/i,"Transversal "],[/^(cq|cir|circ)\.?\s*(?=\d)/i,"Circular "]];
+function expandir(q){for(const [re,full] of VIAS)if(re.test(q))return q.replace(re,full);return q}
+async function suggest(q,limit=5){
+  q=expandir(q.trim());if(q.length<3)return [];
+  if(sugCache.has(q))return sugCache.get(q);
+  if(!placesSession)newSession();
+  const res=await fetch("https://places.googleapis.com/v1/places:autocomplete",{method:"POST",
+    headers:{"Content-Type":"application/json","X-Goog-Api-Key":key()},
+    body:JSON.stringify({input:q,languageCode:"es",regionCode:"co",includedRegionCodes:["co"],sessionToken:placesSession,
+      locationBias:{circle:{center:{latitude:CIUDAD.centro[0],longitude:CIUDAD.centro[1]},radius:CIUDAD.radio}}})});
+  const j=await res.json();
+  if(!res.ok)throw new Error(j.error?j.error.message:"Error "+res.status);
+  let out=(j.suggestions||[]).filter(s=>s.placePrediction).map(s=>{
+    const p=s.placePrediction, f=p.structuredFormat||{};
+    return {placeId:p.placeId,name:(f.mainText&&f.mainText.text)||p.text.text,detail:(f.secondaryText&&f.secondaryText.text)||""};
+  });
+  // si escribió "Carrera ...", primero las carreras (Google a veces pone antes "Calle ...")
+  const via=(q.match(/^(Carrera|Calle|Avenida|Diagonal|Transversal|Circular)\s/)||[])[1];
+  if(via){const ok=r=>expandir(r.name).toLowerCase().startsWith(via.toLowerCase())?0:1;out=out.map((r,i)=>[r,i]).sort((a,b)=>ok(a[0])-ok(b[0])||a[1]-b[1]).map(x=>x[0])}
+  out=out.slice(0,limit);
+  sugCache.set(q,out);
   return out;
+}
+/* Ubicación de una sugerencia (cierra la sesión de búsqueda: así Google la cobra como una sola). */
+async function placeLocation(s){
+  if(s.pos)return s;
+  const res=await fetch("https://places.googleapis.com/v1/places/"+encodeURIComponent(s.placeId)+"?"+new URLSearchParams({
+    sessionToken:placesSession||"",languageCode:"es"}),{headers:{"X-Goog-Api-Key":key(),"X-Goog-FieldMask":"location"}});
+  const j=await res.json();
+  placesSession=null;
+  if(!res.ok||!j.location)throw new Error(j.error?j.error.message:"No pude ubicar ese lugar.");
+  return {...s,pos:[j.location.latitude,j.location.longitude]};
 }
 async function geocode(q){
   const ll=q.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
   if(ll)return {pos:[+ll[1],+ll[2]],name:q.trim()};
   const gmUrl=q.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
   if(gmUrl)return {pos:[+gmUrl[1],+gmUrl[2]],name:"Punto del mapa"};
-  let r=await suggest(q,1);
-  if(!r.length){
-    const n=await nominatim("search",{q:q.replace(/\s*(#|n[°º]|no\.)\s*/gi," "),countrycodes:"co",limit:"1",addressdetails:"1",viewbox:CIUDAD.caja.join(","),bounded:"1"});
-    if(n.length)r=[{pos:[+n[0].lat,+n[0].lon],name:shortPlace(n[0])}];
-  }
-  if(!r.length)throw new Error("No encontré «"+q+"» en "+CIUDAD.nombre+". Escribe más despacio y elige de la lista, o marca el punto en el mapa.");
-  return r[0];
-}
-const [W_,N_,E_,S_]=CIUDAD.caja;
-async function photonSearch(q,limit){
-  const res=await fetch("https://photon.komoot.io/api/?"+new URLSearchParams({q,limit:String(limit+2),
-    bbox:[W_,S_,E_,N_].join(","),lat:CIUDAD.centro[0],lon:CIUDAD.centro[1]}));
-  if(!res.ok)return [];
-  const seen=new Set(), out=[];
-  for(const f of (await res.json()).features||[]){
-    const p=f.properties, c=f.geometry.coordinates;
-    const name=p.name||(p.street?(p.street+(p.housenumber?" "+p.housenumber:"")):"");
-    if(!name)continue;
-    const key=normTxt(name)+"|"+c[1].toFixed(3)+"|"+c[0].toFixed(3);
-    if(seen.has(key))continue;seen.add(key);
-    const street=p.street&&p.name?(p.street+(p.housenumber?" "+p.housenumber:"")):"";
-    out.push({pos:[c[1],c[0]],name,detail:[street,p.district||p.locality,p.city].filter(Boolean).join(", "),
-      street:p.street||(p.osm_key==="highway"?p.name:""),housenumber:p.housenumber||""});
-    if(out.length>=limit)break;
-  }
-  return out;
-}
-async function tomtom(q,limit){
-  const res=await fetch("https://api.tomtom.com/search/2/search/"+encodeURIComponent(q)+".json?"+new URLSearchParams({
-    key:CFG.tomtomKey,typeahead:"true",limit:String(limit),countrySet:"CO",language:"es-419",
-    lat:CIUDAD.centro[0],lon:CIUDAD.centro[1],radius:"40000"}));
-  if(!res.ok)throw new Error("TomTom "+res.status);
-  return ((await res.json()).results||[]).map(r=>{
-    const a=r.address||{}, calle=a.streetName?(a.streetName+(a.streetNumber?" # "+a.streetNumber:"")):"";
-    const name=r.poi?r.poi.name:(calle||a.freeformAddress);
-    return {pos:[r.position.lat,r.position.lon],name,
-      detail:[r.poi?calle:"",a.municipalitySubdivision,a.municipality].filter(Boolean).join(", ")};
-  });
-}
-function photonName(p){
-  const street=p.street?(p.street+(p.housenumber?" "+p.housenumber:"")):"";
-  const parts=[p.name&&p.name!==p.street?p.name:"",street,p.district||p.locality||""].filter(Boolean);
-  return [...new Set(parts)].slice(0,2).join(", ")+(p.city?", "+p.city:"");
-}
-function shortPlace(r){
-  const a=r.address||{}, n=r.name;
-  const street=a.road?(a.road+(a.house_number?" "+a.house_number:"")):"";
-  const zone=a.neighbourhood||a.suburb||a.quarter||a.city_district||"";
-  const parts=[n&&n!==a.road?n:"",street,zone].filter(Boolean);
-  if(parts.length)return [...new Set(parts)].slice(0,2).join(", ")+(a.city?", "+a.city:"");
-  return r.display_name.split(",").slice(0,3).join(",");
+  const s=await suggest(q,1);
+  if(!s.length)throw new Error("No encontré «"+q+"». Escribe y elige de la lista, o marca el punto en el mapa.");
+  return placeLocation(s[0]);
 }
 async function reverseGeocode(pos){
   try{
-    const res=await fetch("https://photon.komoot.io/reverse?"+new URLSearchParams({lat:pos[0],lon:pos[1],limit:"1"}));
-    const f=res.ok?((await res.json()).features||[]):[];
-    if(f.length)return photonName(f[0].properties);
-  }catch(e){}
-  try{
-    const r=await nominatim("reverse",{lat:pos[0],lon:pos[1],zoom:"18",addressdetails:"1"});
-    if(r&&r.display_name)return shortPlace(r);
+    await loadMap();
+    const r=await new gm.Geocoder().geocode({location:{lat:pos[0],lng:pos[1]},language:"es"});
+    if(r.results&&r.results.length)return r.results[0].formatted_address.replace(/, Colombia$/,"");
   }catch(e){}
   return pos[0].toFixed(6)+", "+pos[1].toFixed(6);
 }
 
-/* Ruta a pie: servidor OSRM público de OpenStreetMap Alemania (FOSSGIS). */
+/* ---------- Ruta a pie: Routes API ---------- */
 async function computeRoute(points){
-  const coords=points.map(p=>p[1].toFixed(6)+","+p[0].toFixed(6)).join(";");
-  const res=await fetch("https://routing.openstreetmap.de/routed-foot/route/v1/foot/"+coords+"?overview=full&geometries=polyline");
-  if(!res.ok)throw new Error(res.status===429?"429":"Error "+res.status+" calculando la ruta");
+  const L=p=>({location:{latLng:{latitude:p[0],longitude:p[1]}}});
+  const body={origin:L(points[0]),destination:L(points[points.length-1]),
+    intermediates:points.slice(1,-1).map(L),travelMode:"WALK",languageCode:"es"};
+  const res=await fetch("https://routes.googleapis.com/directions/v2:computeRoutes",{method:"POST",
+    headers:{"Content-Type":"application/json","X-Goog-Api-Key":key(),
+      "X-Goog-FieldMask":"routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline"},
+    body:JSON.stringify(body)});
   const j=await res.json();
-  if(j.code!=="Ok"||!j.routes||!j.routes.length)throw new Error("No encontré una ruta a pie entre esos puntos.");
-  return decodePolyline(j.routes[0].geometry);
+  if(!res.ok)throw new Error(j.error?j.error.message:("Error "+res.status));
+  if(!j.routes||!j.routes.length)throw new Error("Google no encontró una ruta a pie entre esos puntos.");
+  return decodePolyline(j.routes[0].polyline.encodedPolyline);
 }
 
-/* ---------- Mapillary ---------- */
-const MLY="https://graph.mapillary.com/";
-async function mly(path,params){
-  const res=await fetch(MLY+path+"?"+new URLSearchParams({access_token:key(),...params}));
-  let j=null;try{j=await res.json()}catch(e){}
-  if(!res.ok){
-    const m=j&&j.error&&j.error.message||("Error "+res.status+" en Mapillary");
-    throw new Error(res.status===401||res.status===403?"OAuth: "+m:m);
-  }
-  return j;
+/* ---------- Street View Static API ---------- */
+/* La consulta de metadatos es gratis: sirve para saber si hay foto y dónde. */
+async function svMeta(pos,radius){
+  const p=new URLSearchParams({location:pos.join(","),radius:String(radius),source:"outdoor",key:key()});
+  const r=await (await fetch("https://maps.googleapis.com/maps/api/streetview/metadata?"+p)).json();
+  if(r.status==="OK")return {pano:r.pano_id,pos:[r.location.lat,r.location.lng]};
+  if(r.status==="ZERO_RESULTS"||r.status==="NOT_FOUND")return null;
+  throw new Error(r.error_message||r.status);
 }
-/* Todas las fotos en una franja de ~25 m a lado y lado de la ruta. */
-async function mlyImagesAlong(path,onProgress){
-  const CHUNK=60, PAD=25, boxes=[]; // cajas pequeñas: en zonas con muchas fotos Mapillary devuelve máximo 2000
-  for(let s=0;s<path.length;s+=CHUNK){
-    let w=180,e=-180,n=-90,so=90;
-    for(let d=s;d<=Math.min(path.length,s+CHUNK);d+=10){
-      const p=path.at(d);
-      w=Math.min(w,p[1]);e=Math.max(e,p[1]);n=Math.max(n,p[0]);so=Math.min(so,p[0]);
-    }
-    const p=path.at(Math.min(path.length,s+CHUNK));
-    w=Math.min(w,p[1]);e=Math.max(e,p[1]);n=Math.max(n,p[0]);so=Math.min(so,p[0]);
-    const dLat=PAD/111320, dLng=PAD/(111320*Math.cos(rad(n)));
-    boxes.push([w-dLng,so-dLat,e+dLng,n+dLat].map(v=>v.toFixed(6)).join(","));
-  }
-  const all=new Map();
-  await pool(boxes,4,async bbox=>{
-    const j=await mly("images",{bbox,limit:"2000",
-      fields:"id,computed_geometry,geometry,computed_compass_angle,compass_angle,captured_at,is_pano,sequence"});
-    (j.data||[]).forEach(im=>{
-      const g=im.computed_geometry||im.geometry;if(!g)return;
-      const compass=im.computed_compass_angle!=null?im.computed_compass_angle:im.compass_angle;
-      if(compass==null&&!im.is_pano)return;
-      all.set(im.id,{id:im.id,pos:[g.coordinates[1],g.coordinates[0]],compass:compass||0,
-        pano:!!im.is_pano,seq:im.sequence,time:im.captured_at||0});
-    });
-  },k=>onProgress&&onProgress(k/boxes.length));
-  return [...all.values()];
-}
-async function mlyBitmap(id,pano){
-  const j=await mly(id,{fields:"thumb_2048_url,thumb_1024_url"});
-  const url=pano?(j.thumb_2048_url||j.thumb_1024_url):(j.thumb_1024_url||j.thumb_2048_url);
-  if(!url)return null;
+const imgCache=new Map();
+async function svImage(pano,heading,fmt){
+  const [w,h,fov]=fmt==="v"?[360,640,62]:[640,360,90];
+  const p=new URLSearchParams({size:w+"x"+h,pano,heading:heading.toFixed(1),pitch:"0",fov:String(fov),
+    return_error_code:"true",key:key()});
+  const url="https://maps.googleapis.com/maps/api/streetview?"+p;
+  if(imgCache.has(url))return imgCache.get(url);
   const res=await fetch(url);
-  if(!res.ok)return null;
-  return createImageBitmap(await res.blob());
+  if(!res.ok){if(res.status===403||res.status===429)throw new Error(await res.text()||("Error "+res.status));return null}
+  const bmp=await createImageBitmap(await res.blob());
+  imgCache.set(url,bmp);
+  return bmp;
 }

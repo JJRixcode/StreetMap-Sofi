@@ -1,32 +1,29 @@
-/* ---------- Mapa y edición de la ruta (Leaflet + OpenStreetMap) ---------- */
-let map=null, coverage=null;
+/* ---------- Mapa y edición de la ruta (Google Maps) ---------- */
+let map=null, gm=null, mapLoading=null;
 function loadMap(){
-  if(map)return map;
-  map=L.map("map",{zoomControl:true}).setView(CIUDAD.centro,CIUDAD.zoom);
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,
-    attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · Fotos <a href="https://www.mapillary.com" target="_blank" rel="noopener">Mapillary</a>'}).addTo(map);
-  map.on("click",e=>onMapClick([e.latlng.lat,e.latlng.lng]));
-  showCoverage();
-  return map;
+  if(mapLoading)return mapLoading;
+  mapLoading=new Promise((resolve,reject)=>{
+    window.__svInit=()=>{
+      gm=google.maps;
+      map=new gm.Map($("map"),{center:{lat:CIUDAD.centro[0],lng:CIUDAD.centro[1]},zoom:CIUDAD.zoom,clickableIcons:false,
+        streetViewControl:false,mapTypeControl:false,fullscreenControl:false,gestureHandling:isPhone()?"cooperative":"greedy"});
+      map.addListener("click",e=>onMapClick([e.latLng.lat(),e.latLng.lng()]));
+      resolve();
+    };
+    window.gm_authFailure=()=>setMsg($("routeMsg"),"Google rechazó la clave para el mapa. La clave solo funciona en la página publicada.","err");
+    const sc=document.createElement("script");
+    sc.src="https://maps.googleapis.com/maps/api/js?"+new URLSearchParams({key:key(),v:"weekly",language:"es",region:"CO",callback:"__svInit"});
+    sc.async=true;sc.onerror=()=>{mapLoading=null;reject(new Error("No se pudo cargar el mapa de Google. Revisa tu conexión."))};
+    document.head.appendChild(sc);
+  });
+  mapLoading.catch(e=>setMsg($("routeMsg"),e.message,"err"));
+  return mapLoading;
 }
-/* Calles con fotos de Mapillary, en verde. */
-function showCoverage(){
-  if(!map)return;
-  if(coverage){map.removeLayer(coverage);coverage=null}
-  if(!key()||!L.vectorGrid)return;
-  coverage=L.vectorGrid.protobuf("https://tiles.mapillary.com/maps/vtp/mly1_public/2/{z}/{x}/{y}?access_token="+encodeURIComponent(key()),{
-    maxNativeZoom:14,minZoom:6,interactive:false,pane:"overlayPane",
-    vectorTileLayerStyles:{
-      // Mapillary solo da teselas hasta zoom 14: al acercar se agrandan, por eso la línea es fina
-      sequence:{color:"#05cb63",weight:.8,opacity:.6},
-      image:[],overview:[]
-    }
-  }).addTo(map);
-}
-const LL=p=>L.latLng(p[0],p[1]);
-const endIcon=(color,text)=>L.divIcon({className:"pin",iconSize:[30,30],iconAnchor:[15,15],
-  html:`<span style="background:${color}">${text}</span>`});
-const wpIcon=()=>L.divIcon({className:"wp",iconSize:[18,18],iconAnchor:[9,9],html:"<span></span>"});
+const LL=p=>({lat:p[0],lng:p[1]});
+function focusMap(pos){if(map){map.panTo(LL(pos));if(map.getZoom()<16)map.setZoom(16)}}
+function fitRoute(b){if(map&&b&&b!==true)map.fitBounds(b,30)}
+function endIcon(color){return {path:gm.SymbolPath.CIRCLE,scale:13,fillColor:color,fillOpacity:1,strokeColor:"#fff",strokeWeight:3}}
+const wpIcon=()=>({path:gm.SymbolPath.CIRCLE,scale:7,fillColor:"#fff",fillOpacity:1,strokeColor:"#1a73e8",strokeWeight:4});
 
 const state={from:null,to:null,waypoints:[],path:null,frames:null,pick:null};
 let routeLine=null, fromMarker=null, toMarker=null, wpMarkers=[];
@@ -35,11 +32,11 @@ function placeEnd(which,pos,name){
   state[which]={pos,name};
   if(!map)return;
   let m=which==="from"?fromMarker:toMarker;
-  if(m){m.setLatLng(LL(pos));return}
-  m=L.marker(LL(pos),{draggable:true,zIndexOffset:1000,
-    icon:endIcon(which==="from"?"#188038":"#d93025",which==="from"?"A":"B")}).addTo(map);
-  m.on("dragend",async()=>{
-    const ll=m.getLatLng(), p=[ll.lat,ll.lng];
+  if(m){m.setPosition(LL(pos));return}
+  m=new gm.Marker({map,position:LL(pos),draggable:true,zIndex:10,icon:endIcon(which==="from"?"#188038":"#d93025"),
+    label:{text:which==="from"?"A":"B",color:"#fff",fontWeight:"700",fontSize:"12px"}});
+  m.addListener("dragend",async()=>{
+    const p=[m.getPosition().lat(),m.getPosition().lng()];
     state[which].pos=p;
     $(which).value="Buscando dirección…";
     state[which].name=await reverseGeocode(p);
@@ -51,12 +48,12 @@ function placeEnd(which,pos,name){
 }
 function shortName(n){return (n||"").split(",").slice(0,1).join(",").trim()}
 function drawWaypoints(){
-  wpMarkers.forEach(m=>m.remove());wpMarkers=[];
+  wpMarkers.forEach(m=>m.setMap(null));wpMarkers=[];
   if(!map)return;
   state.waypoints.forEach((p,i)=>{
-    const m=L.marker(LL(p),{draggable:true,icon:wpIcon(),title:"Tócalo para quitarlo",zIndexOffset:500}).addTo(map);
-    m.on("dragend",()=>{const ll=m.getLatLng();state.waypoints[i]=[ll.lat,ll.lng];route()});
-    m.on("click",()=>{state.waypoints.splice(i,1);drawWaypoints();route()});
+    const m=new gm.Marker({map,position:LL(p),draggable:true,icon:wpIcon(),title:"Tócalo para quitarlo",zIndex:5});
+    m.addListener("dragend",()=>{state.waypoints[i]=[m.getPosition().lat(),m.getPosition().lng()];route()});
+    m.addListener("click",()=>{state.waypoints.splice(i,1);drawWaypoints();route()});
     wpMarkers.push(m);
   });
 }
@@ -85,7 +82,7 @@ async function onMapClick(p){
 function setPick(which){
   state.pick=which;
   document.querySelectorAll(".pick").forEach(b=>b.classList.toggle("on",b.dataset.pick===which));
-  $("map").classList.toggle("picking",!!which);
+  if(map)map.setOptions({draggableCursor:which?"crosshair":null});
   if(which){
     setMsg($("routeMsg"),"Toca el mapa en el punto de "+(which==="from"?"salida":"llegada")+".");
     if(isPhone())$("map").scrollIntoView({behavior:"smooth",block:"start"});
@@ -104,9 +101,10 @@ async function route(){
     state.path=new Path(pts);
     let b=null;
     if(map){
-      if(routeLine)routeLine.remove();
-      routeLine=L.polyline(pts,{color:"#1a73e8",weight:6,opacity:.85}).addTo(map);
-      b=routeLine.getBounds();
+      if(routeLine)routeLine.setMap(null);
+      routeLine=new gm.Polyline({map,path:pts.map(LL),strokeColor:"#1a73e8",strokeWeight:6,strokeOpacity:.85});
+      routeLine.addListener("click",e=>onMapClick([e.latLng.lat(),e.latLng.lng()]));
+      b=new gm.LatLngBounds();pts.forEach(p=>b.extend(LL(p)));
     }
     $("stDist").textContent=fmtDist(state.path.length);
     $("stTime").textContent=fmtTime(state.path.length);
@@ -116,7 +114,8 @@ async function route(){
       $("prepBtn").disabled=true;
       return b||true;
     }
-    setMsg($("routeMsg"),"Listo. Ahora prepara el recorrido para ver qué fotos hay.","ok");
+    const est=Math.ceil(state.path.length/+$("step").value)+1;
+    setMsg($("routeMsg"),"Listo. El video usará unas "+est+" fotos de Street View.","ok");
     $("prepBtn").disabled=false;
     return b||true;
   }catch(e){
@@ -125,7 +124,7 @@ async function route(){
   }
 }
 $("routeBtn").onclick=async()=>{
-  loadMap();
+  try{await loadMap()}catch(e){return}
   const f=$("from").value.trim(),t=$("to").value.trim();
   if(!f||!t){setMsg($("routeMsg"),"Escribe las dos direcciones (o elígelas en el mapa).","err");return}
   setMsg($("routeMsg"),"Buscando direcciones…");
@@ -134,7 +133,7 @@ $("routeBtn").onclick=async()=>{
     if(!state.to||state.to.name!==t){const g=await geocode(t);placeEnd("to",g.pos,g.name);$("to").value=g.name;$("title").value=shortName(g.name)}
     state.waypoints=[];drawWaypoints();
     const b=await route();
-    if(b&&b!==true)map.fitBounds(b,{padding:[30,30]});
+    fitRoute(b);
     if(b&&isPhone())$("map").scrollIntoView({behavior:"smooth",block:"start"});
   }catch(e){setMsg($("routeMsg"),explain(e),"err")}
 };

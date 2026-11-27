@@ -1,64 +1,55 @@
-# Ruta a pie en fotos
+# Ruta a pie en Street View
 
-Página web para explicar cómo llegar caminando a una dirección. Pones de dónde sales y a dónde vas, y la app genera un **video caminando por fotos reales de la calle** con un mapita, los giros y la distancia que falta. El video se descarga en MP4 o se comparte directo a WhatsApp desde el celular.
+Página web para explicar cómo llegar caminando a una dirección. Pones de dónde sales y a dónde vas, y la app genera un **video caminando por Google Street View** con un mapita, los giros y la distancia que falta. El video se descarga en MP4 o se comparte directo a WhatsApp desde el celular.
 
-Todo es **gratis y sin tarjeta**: usa OpenStreetMap para el mapa, la búsqueda y las rutas, y [Mapillary](https://www.mapillary.com) para las fotos. Corre en el navegador, sin servidor propio ni base de datos, y está publicada en GitHub Pages.
+Todo corre en el navegador, sin servidor propio ni base de datos, y está publicada en GitHub Pages:
+**https://jjrixcode.github.io/StreetMap-Sofi/**
 
-> La versión anterior con Google Street View está guardada en la rama `google`.
+> Hubo una versión gratis con fotos de Mapillary y mapas de OpenStreetMap. Está en el historial de git (commits de noviembre de 2026) por si se necesita otra vez.
 
 ## Qué hace
 
-- Mientras escribes, **sugiere lugares y direcciones** (como Google Maps). También puedes marcar los puntos tocando el mapa.
-- Calcula la ruta a pie.
-- Muestra en **verde** las calles que tienen fotos. Si la ruta va por calles sin fotos, **toca el mapa** sobre una calle verde para que pase por ahí. Los puntos se pueden arrastrar y, si tocas uno, se quita.
-- Elige una foto cada pocos metros: cerca de la ruta, mirando hacia donde vas, reciente y, si se puede, de la misma secuencia que la anterior para que el video se vea continuo.
-- Con fotos 360° la cámara mira hacia donde vas y gira en las esquinas ("Gira a la derecha / izquierda"). Con fotos normales hace corte directo.
+- Mientras escribes, **sugiere lugares y direcciones** (Google Places), como en Google Maps. Entiende abreviaturas como «Cra 70 # 44-20» o «Cl 10 # 43A-20». También puedes marcar los puntos tocando el mapa.
+- Al elegir origen y destino, calcula sola la ruta a pie.
+- Si conoces otro camino, **toca el mapa** para que la ruta pase por ahí. Los puntos se pueden arrastrar y, si tocas uno, se quita.
+- Baja las fotos de Street View a lo largo de la ruta, con la cámara mirando hacia donde vas. En las esquinas gira y avisa «Gira a la derecha» o «Gira a la izquierda».
 - Graba el video en horizontal (16:9) o vertical (9:16, para WhatsApp e historias).
 - Funciona en computador y en celular.
 
-## Servicios que usa (todos gratis)
+## Google Cloud
 
-| Para qué | Servicio | ¿Pide registro? |
-|---|---|---|
-| Mapa | Teselas de [OpenStreetMap](https://www.openstreetmap.org) con [Leaflet](https://leafletjs.com) | No |
-| Buscar y sugerir direcciones | [Photon](https://photon.komoot.io) y, si no encuentra, [Nominatim](https://nominatim.org). Opcional: [TomTom](https://developer.tomtom.com) | No (TomTom: clave gratis) |
-| Ruta a pie | [OSRM de OpenStreetMap Alemania](https://routing.openstreetmap.de) | No |
-| Fotos y calles en verde | [Mapillary](https://www.mapillary.com) | Sí: token gratis |
+Proyecto **StreetMap Sofi** (`streetmap-sofi`) con facturación activa. La clave está en `config.js`, así que nadie tiene que pegarla.
 
-Los servicios de OpenStreetMap son públicos y tienen reglas de uso justo: sirven para una app como esta, no para miles de consultas por minuto.
+**APIs que usa** (la clave solo puede usar estas 5):
 
-## El token de Mapillary
+| API | Para qué |
+|---|---|
+| Maps JavaScript API | El mapa |
+| Places API (New) | Sugerencias de lugares y direcciones |
+| Geocoding API | Nombre de un punto tocado en el mapa |
+| Routes API | La ruta a pie |
+| Street View Static API | Las fotos del video |
 
-1. Crea una cuenta gratis en [mapillary.com](https://www.mapillary.com/signup). No pide tarjeta.
-2. Entra a [Dashboard → Developers](https://www.mapillary.com/dashboard/developers) y dale **Register application**.
-3. Ponle un nombre y una descripción. En *Website* pon `https://jjrixcode.github.io/StreetMap-Sofi/` y marca el permiso **Read**.
-4. Copia el **Client Token** (empieza por `MLY|`).
+**Protecciones para no pagar:**
 
-### ¿Dónde se pone?
+- La clave solo funciona desde `https://jjrixcode.github.io/*` (y `http://localhost:8000/*` para pruebas).
+- Límites diarios, cerca del cupo gratis mensual de Google (unos 10.000 usos por API al mes):
 
-Ya está puesto en `config.js`, así que la app no lo pide. Ojo: usa el **Client Token**, no el *Client Secret*. Los dos empiezan por `MLY|`, pero con el secreto el mapa carga y las fotos no aparecen.
+| Cuota | Límite al día |
+|---|---|
+| Street View Static: fotos | 330 |
+| Maps JavaScript: cargas del mapa | 300 |
+| Places: sugerencias / ubicación de un lugar | 300 / 300 |
+| Geocoding | 300 |
+| Routes: rutas | 300 |
 
-- **En la app:** pégalo en la tarjeta «1 · Token de Mapillary» y dale *Guardar*. Se guarda solo en ese navegador.
-- **Fijo en `config.js`**, para que nadie tenga que pegarlo. El *Client Token* es de solo lectura y está hecho para usarse en páginas web, así que se puede dejar en el código:
-
-```js
-window.CONFIG = {
-  mapillaryToken: "MLY|...tu token...",
-  ...
-};
-```
-
-En `config.js` también está la ciudad donde se buscan primero las direcciones (por defecto, Medellín y el Valle de Aburrá).
-
-### Mejores direcciones con TomTom (opcional)
-
-Los datos gratis de OpenStreetMap encuentran bien muchos lugares (centros comerciales, estaciones, barrios), pero en Medellín tienen pocas direcciones exactas y les faltan sitios como el Parque Lleras. Si pones una clave gratis de [TomTom](https://developer.tomtom.com) (no pide tarjeta, 2.500 búsquedas al día) en `tomtomKey` de `config.js`, la app usa TomTom para las sugerencias y deja OpenStreetMap como respaldo.
+Una ruta de 1 km usa unas 110 a 130 fotos, así que alcanzan **2 o 3 videos al día**. Si se llega al límite, la app deja de funcionar ese día en vez de cobrar. Para más videos se sube el límite en *Google Maps Platform → Cuotas* (lo que pase del cupo gratis se cobra).
 
 ## Uso
 
-1. Escribe **Desde** y **Hasta** y elige de la lista de sugerencias, o toca **📍 Mapa** y marca el punto. Al elegir los dos, la ruta se calcula sola. Si una dirección tipo «Calle 10 # 43A-20» queda corrida, arrastra el punto.
-2. **Calcular ruta a pie.** Si la ruta va por calles sin verde, toca el mapa sobre una calle verde.
-3. Elige formato y velocidad, y dale **Preparar recorrido**. Si hay tramos sin fotos, la app te avisa.
+1. Escribe **Desde** y **Hasta** y elige de la lista, o toca **📍 Mapa** y marca el punto.
+2. Revisa la ruta. Si quieres otro camino, toca el mapa para agregar puntos.
+3. Elige formato y velocidad, y dale **Preparar recorrido**.
 4. **▶ Ver** para revisarlo y **⬇ Descargar video** para grabarlo. En el celular aparece **Compartir** para mandarlo directo por WhatsApp.
 
 Mientras graba, deja la página abierta: el video se graba en tiempo real.
@@ -80,14 +71,13 @@ y abre `http://localhost:8000`.
 
 ```
 index.html          Página principal
-config.js           Token de Mapillary y ciudad
+config.js           Clave de Google y ciudad
 css/estilos.css     Diseño (computador y celular)
 js/utilidades.js    Cálculos de distancias y rumbos
-js/servicios.js     Búsqueda, rutas y consultas a Mapillary
+js/servicios.js     Google: sugerencias, ruta a pie y Street View
+js/mapa.js          Mapa, puntos y ruta
 js/sugerencias.js   Lista de sugerencias mientras escribes
-js/panoramica.js    Recorta las fotos 360° hacia donde vas
-js/mapa.js          Mapa, puntos, ruta y calles con fotos
-js/recorrido.js     Elige y baja las fotos a lo largo de la ruta
+js/recorrido.js     Busca y baja las fotos de Street View
 js/video.js         Dibuja, reproduce y graba el video
 js/inicio.js        Arranque de la app
 iconos/icono.svg    Ícono de la pestaña
@@ -95,4 +85,4 @@ iconos/icono.svg    Ícono de la pestaña
 
 ## Nota sobre las imágenes
 
-Las fotos son de Mapillary, publicadas por sus autores con licencia [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). Por eso el video siempre lleva la marca «Fotos: Mapillary (CC BY-SA)». El mapa es © colaboradores de OpenStreetMap. La app no guarda las fotos: se usan solo mientras la página está abierta.
+Las fotos son de Google Street View y el video siempre lleva la marca «Imágenes © Google», como pide Google. La app no guarda las fotos: se usan solo mientras la página está abierta.

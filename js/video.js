@@ -90,7 +90,7 @@ function renderAt(t){
   }
   miniMap(d,u);
   ctx.font=`500 ${Math.round(17*u)}px system-ui,sans-serif`;ctx.textAlign="right";ctx.textBaseline="bottom";
-  const credit="Fotos: Mapillary (CC BY-SA)";
+  const credit="Imágenes © Google";
   ctx.lineWidth=3*u;ctx.strokeStyle="rgba(0,0,0,.6)";ctx.strokeText(credit,W-m,H-m*0.8);
   ctx.fillStyle="#fff";ctx.fillText(credit,W-m,H-m*0.8);
   // intro / final
