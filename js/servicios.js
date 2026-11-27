@@ -120,8 +120,20 @@ async function contador(accion,n){
   const r=await fetch(CFG.contador+"?"+q,{cache:"no-store"});
   if(!r.ok)throw new Error("Contador: error "+r.status);
   const j=await r.json();
-  if(typeof j.quedan==="number")fotosQuedan=j.quedan;
+  if(typeof j.quedan==="number"){fotosQuedan=j.quedan;mostrarCupo()}
   return j;
+}
+// Indicador fijo en la sección Video, y el aviso de la ruta con el número al día
+function mostrarCupo(){
+  const el=$("cupoFotos");
+  if(el&&fotosQuedan!=null){
+    el.hidden=false;el.querySelector("b").textContent=numero(fotosQuedan);
+    el.classList.toggle("poco",fotosQuedan<500);
+  }
+  const msg=$("routeMsg");
+  if(typeof state!=="undefined"&&state.path&&msg.classList.contains("ok")){
+    const [aviso,tipo]=avisoFotos(Math.ceil(state.path.length/+$("step").value)+1);setMsg(msg,aviso,tipo);
+  }
 }
 const numero=n=>n.toLocaleString("es-CO");
 const textoQuedan=()=>fotosQuedan==null?"":" Te quedan "+numero(fotosQuedan)+" fotos este mes.";
